@@ -1,0 +1,54 @@
+name: App Store screenshots
+on:
+  workflow_dispatch:
+jobs:
+  screenshots:
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iPhone, iPad]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Capture real app screens with public demo content
+        timeout-minutes: 15
+        env:
+          SCREENSHOT_DEVICE: ${{ matrix.device }}
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, os, sys
+          devices = [d for runtime, items in json.load(sys.stdin)["devices"].items() if "iOS" in runtime for d in items]
+          if os.environ["SCREENSHOT_DEVICE"] == "iPad":
+              matches = [d for d in devices if d["name"].startswith(("iPad Pro (13-inch)", "iPad Pro (12.9-inch)"))]
+          else:
+              matches = [d for d in devices if d["name"].startswith("iPhone") and "Pro Max" in d["name"]]
+          if not matches:
+              raise SystemExit("Required App Store screenshot device unavailable")
+          print(matches[0]["udid"])')
+          xcodebuild -project LongShot.xcodeproj -scheme LongShot \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -parallel-testing-enabled NO \
+            -testLanguage zh-Hans -testRegion CN \
+            -only-testing:LongShotUITests/LongShotUITests/testHomeAndDemoEditor \
+            -test-timeouts-enabled YES \
+            -maximum-test-execution-time-allowance 180 \
+            -derivedDataPath /tmp/longshot-store-screenshots \
+            -resultBundlePath /tmp/LongShot-Store.xcresult \
+            CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= test
+      - name: Export screenshots
+        if: always()
+        run: |
+          if [ -d /tmp/LongShot-Store.xcresult ]; then
+            xcrun xcresulttool export attachments \
+              --path /tmp/LongShot-Store.xcresult \
+              --output-path /tmp/LongShot-Store-Screenshots
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: AppStore-screenshots-${{ matrix.device }}
+          path: /tmp/LongShot-Store-Screenshots
