@@ -1,0 +1,23 @@
+name: iOS validation
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  validate:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install generator
+        run: brew install xcodegen
+      - name: Core algorithm tests
+        run: swift test --scratch-path /tmp/longshot-core
+      - name: Generate project
+        run: xcodegen generate
+      - name: Build iOS app and extensions
+        run: |
+          xcodebuild -project LongShot.xcodeproj -scheme LongShot \
+            -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath /tmp/longshot-ci \
+            CODE_SIGNING_ALLOWED=NO build

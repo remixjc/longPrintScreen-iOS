@@ -1,0 +1,55 @@
+{
+  "identifier" : "942F26E1",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "6",
+      "familyShareable" : false,
+      "internalID" : "94762001",
+      "localizations" : [
+        { "description" : "永久解锁录屏自动截屏与录屏导入", "displayName" : "长卷 Pro 终身", "locale" : "zh_CN" }
+      ],
+      "productID" : "com.remixjc.longPrintScreen.pro.lifetime",
+      "referenceName" : "Pro Lifetime",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "zh_CN",
+    "_storefront" : "CHN",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21409211",
+      "localizations" : [],
+      "name" : "长卷 Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "1",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "94762002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            { "description" : "一年内解锁录屏自动截屏与录屏导入", "displayName" : "长卷 Pro 年度", "locale" : "zh_CN" }
+          ],
+          "productID" : "com.remixjc.longPrintScreen.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Pro Yearly",
+          "subscriptionGroupID" : "21409211",
+          "type" : "RecurringSubscription",
+          "winBackOffers" : []
+        }
+      ]
+    }
+  ],
+  "version" : { "major" : 3, "minor" : 0 }
+}
