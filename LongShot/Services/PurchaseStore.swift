@@ -31,7 +31,7 @@ final class PurchaseStore: ObservableObject {
         do {
             products = try await Product.products(for: [AppConfiguration.annualProduct, AppConfiguration.lifetimeProduct])
                 .sorted { $0.price < $1.price }
-            if products.isEmpty { message = "暂时无法获取商品，请检查网络或稍后重试。未配置 App Store 商品时不能购买。" }
+            if products.isEmpty { message = "暂时无法获取商品，请检查网络或稍后重试。" }
         } catch { message = "无法获取商品：\(error.localizedDescription)" }
         await refreshEntitlements()
     }
@@ -60,7 +60,7 @@ final class PurchaseStore: ObservableObject {
         let refreshDeadline = Date().addingTimeInterval(24 * 3600)
         let authorizedUntil = hasPro ? min(annualExpiration ?? .distantFuture, refreshDeadline) : nil
         if !RecordingAuthorization.write(validUntil: authorizedUntil), hasPro {
-            message = "录屏授权无法同步，请检查共享钥匙串签名配置。"
+            message = "录屏授权暂未同步，请重新打开 App 或恢复购买后重试。"
         }
     }
 

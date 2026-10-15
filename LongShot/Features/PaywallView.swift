@@ -36,8 +36,8 @@ struct PaywallView: View {
                             }
                         } else {
                             VStack(spacing: 12) {
-                                plan(id: AppConfiguration.annualProduct, title: "年度订阅", target: "¥1 / 年", caption: "每年自动续订，可随时取消")
-                                plan(id: AppConfiguration.lifetimeProduct, title: "终身解锁", target: "¥6 一次付费", caption: "一次购买，永久使用 Pro")
+                                plan(id: AppConfiguration.annualProduct, title: "年度订阅", caption: "每年自动续订，可随时取消")
+                                plan(id: AppConfiguration.lifetimeProduct, title: "终身解锁", caption: "一次购买，永久使用 Pro")
                             }
                             Button {
                                 if let product = purchases.products.first(where: { $0.id == selected }) {
@@ -88,7 +88,7 @@ struct PaywallView: View {
             }
         }
     }
-    private func plan(id: String, title: String, target: String, caption: String) -> some View {
+    private func plan(id: String, title: String, caption: String) -> some View {
         let product = purchases.products.first { $0.id == id }
         return Button { selected = id } label: {
             HStack(spacing: 14) {
@@ -100,9 +100,9 @@ struct PaywallView: View {
                 }
                 Spacer(minLength: 0)
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(product.map { $0.displayPrice + (id == AppConfiguration.annualProduct ? " / 年" : "") } ?? target)
+                    Text(product.map { $0.displayPrice + (id == AppConfiguration.annualProduct ? " / 年" : "") } ?? "暂不可用")
                         .font(.headline).foregroundStyle(Theme.purple)
-                    if product == nil { Text("目标价格，待商店确认").font(.system(size: 9)).foregroundStyle(Theme.muted) }
+                    if product == nil { Text("请稍后重试").font(.system(size: 10)).foregroundStyle(Theme.muted) }
                 }
             }.padding(18).background(Theme.card, in: RoundedRectangle(cornerRadius: 18))
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(selected == id ? Theme.purple : Theme.inset, lineWidth: 1.5))
