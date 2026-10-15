@@ -20,6 +20,8 @@ CI 将 StoreKit 回归放在独立任务，避免本地交易服务卡住时阻�
 
 本次修复的 [CI 验收任务](https://github.com/remixjc/longPrintScreen-iOS/actions/runs/38691018754/job/116276698058)全部通过：17 项 Swift Package 测试、14 项 iOS 图片 / 导入集成测试、4 项界面测试，共 35 项。模拟器中的 `testSaveDemoToPhotos` 实际保存到相册并收到成功提示。独立 StoreKit 任务的结果不包含在这 35 项中。
 
+同一轮的[独立购买回归](https://github.com/remixjc/longPrintScreen-iOS/actions/runs/38691018754/job/116276698325)未通过：恢复同步失败用例通过，年度 / 终身交易用例在两次独立进程中均超过 120 秒执行上限。该 CI 轮次整体为失败，不能称作全量通过。本次没有更改生产购买逻辑；购买测试仍需单独诊断并在 Sandbox / TestFlight 验证。
+
 可复现测试并保留输入 / 成品：
 
 ```sh
