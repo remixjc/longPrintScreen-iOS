@@ -8,7 +8,13 @@
 
 新增回归使用 CoreText 绘制的 1170 × 2532 中文阅读截图，包含固定顶栏、底栏、变化的时间 / 收藏数和滚动条。测试对照完整原文，检查中间没有缺行、重复正文或固定栏，并对首尾区域逐像素校验。覆盖 PNG、JPEG、乱序、无重叠、稀疏文字及重复排版歧义。
 
-本地 Swift Package 已通过原有与新增用例。图片流水线测试也加入 iOS 集成测试目标，确保同一批回归可以在手机和模拟器执行。
+本地 Swift Package 的 17 项测试全部通过。iPhone 18 Pro Max（iOS 27.0.1）上的 14 项图片 / 导入集成测试全部通过，其中包含 6 项图片流水线回归。真机另外通过编辑 / 拼接点 / 排序流程、照片选择器取消、录屏 / 订阅 / 法律页面共 3 项界面检查。
+
+真机保存检查在 `PHPhotoLibrary.requestAuthorization` 阶段遇到系统 Face ID 验证，未返回保存成功；此项没有记为通过。测试录像和系统辅助功能层级均显示 `LocalAuthenticationUIService`。已把保存检查分为独立用例，其余编辑流程单独在真机重跑通过；未尝试绕过生物识别。
+
+主 App 与两个扩展已成功 Release 编译、归档并导出 1.0.0 (2) 分发 IPA，三个 bundle 的 Apple Distribution 签名与 build 2 版本已校验，包内不含 StoreKit 模拟文件。手机已安装 build 2 开发包。
+
+更新后的[预览](screenshots/editor.png)、[拼接点](screenshots/seam.png)、[裁剪与排序](screenshots/arrangement.png)来自本次真机自动化。[连续长图样本](screenshots/continuous-stitch.png)来自原文逐像素对照的回归用例。
 
 可复现测试并保留输入 / 成品：
 
@@ -62,7 +68,7 @@ StoreKit 模拟文件位于 `Tests/AppTests/Resources/Products.storekit`，用�
 
 ## 尚未完成的真实环境验收
 
-1. iPhone 开发者模式已开启；本次自动真机测试启动时设备锁屏，Xcode 报 `Unlock Jacob's iPhone to Continue`，等待设备解锁才能执行。
+1. iPhone 开发者模式已开启，解锁后集成测试已通过。相册保存触发的系统 Face ID 验证需要机主配合，自动化未完成此步。
 2. ReplayKit 跨 App 实际录屏、旋转、暂停恢复、控制中心入口，以及系统相册分享扩展的完整真机交互，必须在设备上验收。自动化已覆盖其共享数据与处理逻辑，但不能替代真实系统流程。
 3. App Store Connect 当前没有可用的网页登录会话。尚未完成 App 商店记录、真实订阅 / 终身商品和中国区价格档配置，也未上传 TestFlight 或提交审核。
 4. 正式商品价格、退款、购买恢复与到期需在实际 Sandbox / TestFlight 环境复验；本地 StoreKit 测试不会创建商店商品。
