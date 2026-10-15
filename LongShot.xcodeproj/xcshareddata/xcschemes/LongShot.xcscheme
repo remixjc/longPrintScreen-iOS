@@ -88,7 +88,7 @@
       <CommandLineArguments>
       </CommandLineArguments>
       <StoreKitConfigurationFileReference
-         identifier = "../../LongShot/Resources/Products.storekit">
+         identifier = "../../Tests/AppTests/Resources/Products.storekit">
       </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction

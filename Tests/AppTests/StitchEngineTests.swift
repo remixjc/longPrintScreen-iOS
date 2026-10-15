@@ -156,7 +156,7 @@ final class StitchEngineTests: XCTestCase {
 @MainActor
 final class PurchaseStoreTests: XCTestCase {
     private func session() throws -> SKTestSession {
-        let url = try XCTUnwrap(Bundle.main.url(forResource: "Products", withExtension: "storekit"))
+        let url = try XCTUnwrap(Bundle(for: PurchaseStoreTests.self).url(forResource: "Products", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState()
         session.disableDialogs = true

@@ -26,6 +26,7 @@
 		58037C34902393D5B0C5BF8D /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E39321238191A3C590B0CF7D /* EditorView.swift */; };
 		5E26B7731E7BFD97BF81ED91 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4AFFED949F9D8BF2D04592B2 /* PrivacyInfo.xcprivacy */; };
 		6512955D1F510733FCBF6BBD /* StitchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD3F71C9F0853E1ED5A73706 /* StitchEngine.swift */; };
+		6A083A60FB845FCE7D5F48B5 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = E4820FBC5B9DA22E951B020B /* Products.storekit */; };
 		6E4BB291E8664884ADB1F58C /* StorageError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D6E8A5C0CB3030DA1D5BADA /* StorageError.swift */; };
 		72B355E5F216D655566F68B1 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9DBA8854177F862D585DC81 /* PaywallView.swift */; };
 		73B8E1E198EC4C06A7C131A3 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E7206E729E454D898697CF6 /* HomeView.swift */; };
@@ -40,7 +41,6 @@
 		B205D4DE5B68CD31444AE626 /* LongShotUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06757D6820C0D48238881A58 /* LongShotUITests.swift */; };
 		C48EB2EC616EBDF8C4B6DBE6 /* StitchCore in Frameworks */ = {isa = PBXBuildFile; productRef = 53E8509BA12BA4E5AC48FE87 /* StitchCore */; };
 		C604CAF1E18CA354D2910C13 /* WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4183690C22600F122F5F73D1 /* WorkspaceModel.swift */; };
-		CE4D36F0E6F2B733A4BEFD7F /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = A94D80E54502606D15464CEB /* Products.storekit */; };
 		EFE46BFCF8ED20EED21E869C /* StitchCore in Frameworks */ = {isa = PBXBuildFile; productRef = 68C35836E9D36858E991F914 /* StitchCore */; };
 		FCC0BEB241CD37FE56B3BD02 /* LongShotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35C8DB771BD46EA00D431C43 /* LongShotApp.swift */; };
 		FDA6CCF8D61369BAC748F5E3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4AFFED949F9D8BF2D04592B2 /* PrivacyInfo.xcprivacy */; };
@@ -118,7 +118,6 @@
 		810D48CEF0A2B552BA70C8A0 /* ShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		85A7CD09603EB6898B2510CB /* LongShot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LongShot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B18C9DCB283B99EAAAEB014 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		A94D80E54502606D15464CEB /* Products.storekit */ = {isa = PBXFileReference; path = Products.storekit; sourceTree = "<group>"; };
 		A9DBA8854177F862D585DC81 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		AD3F71C9F0853E1ED5A73706 /* StitchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchEngine.swift; sourceTree = "<group>"; };
 		B23F95ACFEE18F26EEA4E589 /* SharedStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStorage.swift; sourceTree = "<group>"; };
@@ -127,6 +126,7 @@
 		BDA656647DC06C67E239C307 /* PurchaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseStore.swift; sourceTree = "<group>"; };
 		CB254A074CDDF869ED6DCD9B /* Share.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Share.entitlements; sourceTree = "<group>"; };
 		E39321238191A3C590B0CF7D /* EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorView.swift; sourceTree = "<group>"; };
+		E4820FBC5B9DA22E951B020B /* Products.storekit */ = {isa = PBXFileReference; path = Products.storekit; sourceTree = "<group>"; };
 		EC4A4BF92D34C6ABEB1FCB45 /* PhotoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoPicker.swift; sourceTree = "<group>"; };
 		F3A9A76C71E48114988EE222 /* DemoImages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImages.swift; sourceTree = "<group>"; };
 		FAE34F1B86697D58E4972621 /* VideoFrameExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoFrameExtractor.swift; sourceTree = "<group>"; };
@@ -201,6 +201,14 @@
 			path = UITests;
 			sourceTree = "<group>";
 		};
+		6EC4EE6C6D56EF75A4E900C1 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				E4820FBC5B9DA22E951B020B /* Products.storekit */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		7AF5C6A30C01D77CBEB70F7A /* Imaging */ = {
 			isa = PBXGroup;
 			children = (
@@ -263,6 +271,7 @@
 			isa = PBXGroup;
 			children = (
 				68108B5BFB67F5423CE9C37C /* StitchEngineTests.swift */,
+				6EC4EE6C6D56EF75A4E900C1 /* Resources */,
 			);
 			path = AppTests;
 			sourceTree = "<group>";
@@ -273,7 +282,6 @@
 				FC10D56CDC039F39C5A504EF /* Assets.xcassets */,
 				6DB081A4F2CFDFF8C0F0AC77 /* Info.plist */,
 				533EF1B085B0C6C0B882B37A /* LongShot.entitlements */,
-				A94D80E54502606D15464CEB /* Products.storekit */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -324,6 +332,7 @@
 			buildConfigurationList = 6DA1AEDA14267FA66D016695 /* Build configuration list for PBXNativeTarget "LongShotTests" */;
 			buildPhases = (
 				9262407C5521E5B169DE6D89 /* Sources */,
+				2E28C2D4A7D798F830EF557A /* Resources */,
 			);
 			buildRules = (
 			);
@@ -493,13 +502,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2E28C2D4A7D798F830EF557A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6A083A60FB845FCE7D5F48B5 /* Products.storekit in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B2B32469C54718BF3041C568 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				4E4212BF48FA93F627A93678 /* Assets.xcassets in Resources */,
 				5E26B7731E7BFD97BF81ED91 /* PrivacyInfo.xcprivacy in Resources */,
-				CE4D36F0E6F2B733A4BEFD7F /* Products.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

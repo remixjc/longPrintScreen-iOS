@@ -92,12 +92,11 @@ schemes:
         LongShot: all
     run:
       config: Debug
-      storeKitConfiguration: LongShot/Resources/Products.storekit
+      storeKitConfiguration: Tests/AppTests/Resources/Products.storekit
     test:
       config: Debug
       targets:
         - LongShotTests
         - LongShotUITests
-      storeKitConfiguration: LongShot/Resources/Products.storekit
     archive:
       config: Release
