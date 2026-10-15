@@ -42,8 +42,8 @@ final class LongShotUITests: XCTestCase {
         attach("订阅选项")
         app.buttons["隐私政策"].tap()
         XCTAssertTrue(app.navigationBars["隐私政策"].waitForExistence(timeout: 5))
-        app.navigationBars.buttons["完成"].tap()
-        app.navigationBars.buttons["完成"].tap()
+        app.navigationBars["隐私政策"].buttons["完成"].tap()
+        app.navigationBars["长卷 Pro"].buttons["完成"].tap()
         app.tabBars.buttons["我的"].tap()
         XCTAssertTrue(app.buttons["使用指南"].exists)
     }

@@ -10,8 +10,9 @@ final class PurchaseStore: ObservableObject {
     @Published private(set) var busy = false
     @Published var message: String?
     private var updates: Task<Void, Never>?
+    private var refreshGeneration = 0
 
-    init() {
+    init(automaticallyLoad: Bool = true) {
         updates = Task { [weak self] in
             for await result in Transaction.updates {
                 guard let self else { return }
@@ -21,7 +22,7 @@ final class PurchaseStore: ObservableObject {
                 }
             }
         }
-        Task { await reload() }
+        if automaticallyLoad { Task { await reload() } }
     }
 
     deinit { updates?.cancel() }
@@ -36,6 +37,8 @@ final class PurchaseStore: ObservableObject {
     }
 
     func refreshEntitlements() async {
+        refreshGeneration += 1
+        let generation = refreshGeneration
         var lifetime = false
         var annualExpiration: Date?
         for await result in Transaction.currentEntitlements {
@@ -48,6 +51,9 @@ final class PurchaseStore: ObservableObject {
                 annualExpiration = max(annualExpiration ?? .distantPast, expiry)
             }
         }
+        // StoreKit updates, scene activation and purchase completion can all
+        // refresh concurrently. An older snapshot must never overwrite a newer one.
+        guard generation == refreshGeneration else { return }
         isLifetime = lifetime
         expiration = annualExpiration
         hasPro = lifetime || annualExpiration != nil

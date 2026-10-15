@@ -40,7 +40,8 @@ xcodebuild -project LongShot.xcodeproj -scheme LongShot \
 | --- | --- |
 | `LongShot` | 主 App、工作台、支付与本地文件处理 |
 | `Sources/StitchCore` | 可独立测试的灰度重叠匹配、排序、裁剪和截帧策略 |
-| `Shared` | 图片读写、App Group 收件箱、共享钥匙串授权、隐私清单 |
+| `Imaging` | 不依赖 UIKit 的图片解码、实际合成与 PNG 输出，可在 macOS 测试 |
+| `Shared` | App Group 收件箱、共享钥匙串授权、隐私清单 |
 | `ShareExtension` | 相册分享扩展，按附件顺序保存图片 |
 | `BroadcastExtension` | ReplayKit 视频帧处理，不采集或保存音频 |
 | `Tests` | 核心算法、实际图片合成、StoreKit、UI 自动化 |

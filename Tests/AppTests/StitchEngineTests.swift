@@ -70,7 +70,10 @@ final class PurchaseStoreTests: XCTestCase {
     private func session() throws -> SKTestSession {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "Products", withExtension: "storekit"))
         let session = try SKTestSession(contentsOf: url)
+        session.resetToDefaultState()
         session.disableDialogs = true
+        session.timeRate = .realTime
+        session.storefront = "CHN"
         session.clearTransactions()
         return session
     }
@@ -78,25 +81,35 @@ final class PurchaseStoreTests: XCTestCase {
     func testYearlyPurchaseExpirationAndLifetimeRevocation() async throws {
         let session = try session()
         defer { session.clearTransactions() }
-        let store = PurchaseStore()
+        let store = PurchaseStore(automaticallyLoad: false)
         await store.reload()
         XCTAssertEqual(Set(store.products.map(\.id)), [AppConfiguration.annualProduct, AppConfiguration.lifetimeProduct])
         XCTAssertFalse(store.hasPro)
-        try await session.buyProduct(identifier: AppConfiguration.annualProduct)
-        await store.refreshEntitlements()
+        let annual = try await session.buyProduct(identifier: AppConfiguration.annualProduct)
+        XCTAssertEqual(annual.productID, AppConfiguration.annualProduct)
+        XCTAssertNotNil(annual.expirationDate)
+        await waitForEntitlement(store, active: true)
         XCTAssertTrue(store.hasPro)
         XCTAssertFalse(store.isLifetime)
         XCTAssertNotNil(store.expiration)
         try session.expireSubscription(productIdentifier: AppConfiguration.annualProduct)
-        await store.refreshEntitlements()
+        await waitForEntitlement(store, active: false)
         XCTAssertFalse(store.hasPro)
         let transaction = try await session.buyProduct(identifier: AppConfiguration.lifetimeProduct)
-        await store.refreshEntitlements()
+        await waitForEntitlement(store, active: true)
         XCTAssertTrue(store.hasPro)
         XCTAssertTrue(store.isLifetime)
         try session.refundTransaction(identifier: UInt(transaction.id))
-        await store.refreshEntitlements()
+        await waitForEntitlement(store, active: false)
         XCTAssertFalse(store.hasPro)
         XCTAssertFalse(RecordingAuthorization.isValid)
+    }
+
+    private func waitForEntitlement(_ store: PurchaseStore, active: Bool) async {
+        for _ in 0..<50 {
+            await store.refreshEntitlements()
+            if store.hasPro == active { return }
+            try? await Task.sleep(for: .milliseconds(200))
+        }
     }
 }

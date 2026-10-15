@@ -1,4 +1,5 @@
-import UIKit
+import Foundation
+import CoreGraphics
 import StitchCore
 import UniformTypeIdentifiers
 import ImageIO
@@ -91,7 +92,7 @@ actor StitchEngine {
                                       bitsPerComponent: 8, bytesPerRow: outputWidth * 4,
                                       space: CGColorSpaceCreateDeviceRGB(),
                                       bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { throw StitchError.tooTall }
-        context.setFillColor(UIColor.white.cgColor)
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: outputWidth, height: outputHeight))
         context.interpolationQuality = .high
         var cursor = outputHeight

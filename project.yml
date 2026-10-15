@@ -24,6 +24,7 @@ targets:
     sources:
       - LongShot
       - Shared
+      - Imaging
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.remixjc.longPrintScreen
@@ -40,6 +41,8 @@ targets:
     sources:
       - ShareExtension
       - Shared
+      - Imaging/ImageFiles.swift
+      - Imaging/StorageError.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.remixjc.longPrintScreen.share
@@ -54,6 +57,8 @@ targets:
     sources:
       - BroadcastExtension
       - Shared
+      - Imaging/ImageFiles.swift
+      - Imaging/StorageError.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.remixjc.longPrintScreen.broadcast
