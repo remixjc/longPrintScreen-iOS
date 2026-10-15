@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import StoreKitTest
+import AVFoundation
 @testable import LongShot
 
 final class StitchEngineTests: XCTestCase {
@@ -89,6 +90,54 @@ final class StitchEngineTests: XCTestCase {
         model.closeEditor()
         XCTAssertFalse(FileManager.default.fileExists(atPath: exported.path))
     }
+
+    func testVideoImportExtractsChangingFrames() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let video = directory.appendingPathComponent("recording.mov")
+        let writer = try AVAssetWriter(outputURL: video, fileType: .mov)
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 160, AVVideoHeightKey: 320
+        ])
+        let attributes: [String: Any] = [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB,
+            kCVPixelBufferWidthKey as String: 160, kCVPixelBufferHeightKey as String: 320,
+            kCVPixelBufferCGImageCompatibilityKey as String: true,
+            kCVPixelBufferCGBitmapContextCompatibilityKey as String: true
+        ]
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: attributes)
+        writer.add(input)
+        XCTAssertTrue(writer.startWriting())
+        writer.startSession(atSourceTime: .zero)
+        for index in 0..<30 {
+            let deadline = Date().addingTimeInterval(10)
+            while !input.isReadyForMoreMediaData && Date() < deadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            XCTAssertTrue(input.isReadyForMoreMediaData)
+            var buffer: CVPixelBuffer?
+            XCTAssertEqual(CVPixelBufferCreate(kCFAllocatorDefault, 160, 320, kCVPixelFormatType_32ARGB,
+                                               attributes as CFDictionary, &buffer), kCVReturnSuccess)
+            let frame = try XCTUnwrap(buffer)
+            CVPixelBufferLockBaseAddress(frame, [])
+            let context = try XCTUnwrap(CGContext(data: CVPixelBufferGetBaseAddress(frame), width: 160, height: 320,
+                                                 bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(frame),
+                                                 space: CGColorSpaceCreateDeviceRGB(),
+                                                 bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue))
+            context.setFillColor(CGColor(gray: 0.1 + Double(index) * 0.02, alpha: 1))
+            context.fill(CGRect(x: 0, y: 0, width: 160, height: 320))
+            CVPixelBufferUnlockBaseAddress(frame, [])
+            XCTAssertTrue(adaptor.append(frame, withPresentationTime: CMTime(value: Int64(index), timescale: 10)))
+        }
+        input.markAsFinished()
+        await writer.finishWriting()
+        XCTAssertEqual(writer.status, .completed)
+        let frames = try await VideoFrameExtractor.extract(url: video, directory: directory)
+        XCTAssertGreaterThanOrEqual(frames.count, 2)
+        XCTAssertLessThanOrEqual(frames.count, 60)
+        for frame in frames { XCTAssertEqual(try ImageFiles.size(at: frame).width, 160) }
+    }
 }
 
 @MainActor
@@ -132,6 +181,12 @@ final class PurchaseStoreTests: XCTestCase {
         await waitForEntitlement(store, active: true)
         XCTAssertTrue(store.hasPro)
         XCTAssertTrue(store.isLifetime)
+        let restored = PurchaseStore(automaticallyLoad: false)
+        await restored.restore()
+        await waitForEntitlement(restored, active: true)
+        XCTAssertEqual(restored.message, "已恢复你的 Pro 权益。")
+        XCTAssertTrue(restored.hasPro)
+        XCTAssertTrue(restored.isLifetime)
         try session.refundTransaction(identifier: UInt(transaction.id))
         await waitForEntitlement(store, active: false)
         XCTAssertFalse(store.hasPro)

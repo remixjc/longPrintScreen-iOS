@@ -41,6 +41,13 @@ jobs:
         if: always()
         with:
           name: iOS-test-results
+          path: /tmp/LongShot-CI.xcresult
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: UI-screenshots
           path: |
-            /tmp/LongShot-CI.xcresult
-            /tmp/LongShot-Screenshots
+            /tmp/LongShot-Screenshots/*.png
+            /tmp/LongShot-Screenshots/*.jpg
+            /tmp/LongShot-Screenshots/*.jpeg
+            /tmp/LongShot-Screenshots/manifest.json
