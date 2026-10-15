@@ -18,6 +18,8 @@
 
 CI 将 StoreKit 回归放在独立任务，避免本地交易服务卡住时阻塞图片 / 界面验收。每条测试设置 120 秒默认、180 秒最大执行时间；购买失败最多重启测试进程重试一次，失败仍使 CI 报错。
 
+本次修复的 [CI 验收任务](https://github.com/remixjc/longPrintScreen-iOS/actions/runs/38691018754/job/116276698058)全部通过：17 项 Swift Package 测试、14 项 iOS 图片 / 导入集成测试、4 项界面测试，共 35 项。模拟器中的 `testSaveDemoToPhotos` 实际保存到相册并收到成功提示。独立 StoreKit 任务的结果不包含在这 35 项中。
+
 可复现测试并保留输入 / 成品：
 
 ```sh
