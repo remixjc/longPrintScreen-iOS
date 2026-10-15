@@ -11,8 +11,11 @@ final class PurchaseStore: ObservableObject {
     @Published var message: String?
     private var updates: Task<Void, Never>?
     private var refreshGeneration = 0
+    private let synchronize: () async throws -> Void
 
-    init(automaticallyLoad: Bool = true) {
+    init(automaticallyLoad: Bool = true,
+         synchronize: @escaping () async throws -> Void = { try await AppStore.sync() }) {
+        self.synchronize = synchronize
         updates = Task { [weak self] in
             for await result in Transaction.updates {
                 guard let self else { return }
@@ -91,7 +94,7 @@ final class PurchaseStore: ObservableObject {
         busy = true
         defer { busy = false }
         do {
-            try await AppStore.sync()
+            try await synchronize()
             await refreshEntitlements()
             message = hasPro ? "已恢复你的 Pro 权益。" : "没有找到有效购买，请确认使用了购买时的 Apple 账号。"
         } catch { message = "恢复失败：\(error.localizedDescription)" }

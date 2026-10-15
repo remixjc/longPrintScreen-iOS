@@ -28,7 +28,7 @@
 - 移除多余截帧并保留两张图片下限。
 - 编码真实测试视频，再通过 AVAssetImageGenerator 提取变化帧。
 - StoreKit 商品价格和类型：年付 1、周期一年、终身 6、非消耗型。
-- 年度购买、到期失效、终身解锁、恢复购买、退款撤销。
+- 年度购买、到期失效、终身解锁、从已验证本地交易恢复权益、退款撤销。
 - 首页示例导入、长图工作台、拼接点微调、排序裁剪入口、相册权限与真实保存。
 - 照片选择器取消、录屏使用说明、Pro 页面、隐私政策和页面返回。
 
@@ -37,6 +37,8 @@
 本机使用 Xcode 27。Swift Package 的 11 项测试全部通过，iOS 27 模拟器的 8 项图片 / 导入集成测试全部通过。
 
 本机 iOS 27 测试宿主曾出现启动缓慢、运行器通道断开，以及 StoreKit 本地模拟商品未返回的情况。未将这些运行标记为成功。完整商品与界面流程已在独立 GitHub macOS / iOS 模拟器环境通过。正式 StoreKit 商品仍需真机 Sandbox 或 TestFlight 验证。
+
+另一次 CI 中，`AppStore.sync()` 的真实账号同步使无界面 StoreKitTest 会话等待约十分钟并丢失模拟权益。测试已将账号同步边界注入为可控操作，仍使用 StoreKit 实际验证的本地交易测试恢复权益，并增加同步失败不得解锁的检查。生产环境默认执行 Apple 的 `AppStore.sync()`；真实账号同步明确留待 Sandbox / TestFlight 验收，不把本地模拟通过等同于生产恢复购买通过。
 
 StoreKit 模拟文件位于 `Tests/AppTests/Resources/Products.storekit`，用于测试包和 Xcode 运行配置，不应包含在正式主 App 分发包中。
 

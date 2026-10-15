@@ -194,7 +194,10 @@ final class PurchaseStoreTests: XCTestCase {
         await waitForEntitlement(store, active: true)
         XCTAssertTrue(store.hasPro)
         XCTAssertTrue(store.isLifetime)
-        let restored = PurchaseStore(automaticallyLoad: false)
+        // The session already owns verified local transactions. Account-level
+        // AppStore.sync is a Sandbox/TestFlight check; it can reset or stall
+        // headless StoreKitTest sessions and should not contact a real account here.
+        let restored = PurchaseStore(automaticallyLoad: false, synchronize: {})
         await restored.restore()
         await waitForEntitlement(restored, active: true)
         XCTAssertEqual(restored.message, "已恢复你的 Pro 权益。")
@@ -204,6 +207,18 @@ final class PurchaseStoreTests: XCTestCase {
         await waitForEntitlement(store, active: false)
         XCTAssertFalse(store.hasPro)
         XCTAssertFalse(RecordingAuthorization.isValid)
+    }
+
+    func testRestoreSyncFailureDoesNotGrantPro() async throws {
+        let session = try session()
+        defer { session.clearTransactions() }
+        let store = PurchaseStore(automaticallyLoad: false, synchronize: {
+            throw URLError(.notConnectedToInternet)
+        })
+        await store.restore()
+        XCTAssertFalse(store.hasPro)
+        XCTAssertTrue(store.message?.hasPrefix("恢复失败：") == true)
+        XCTAssertFalse(store.busy)
     }
 
     private func waitForEntitlement(_ store: PurchaseStore, active: Bool) async {
