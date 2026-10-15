@@ -14,6 +14,18 @@ final class LongShotUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["拼接工作台"].waitForExistence(timeout: 30))
         XCTAssertTrue(app.staticTexts["已按连续内容调整顺序"].waitForExistence(timeout: 10))
         attach("长图预览")
+        app.buttons["saveImage"].tap()
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let permission = springboard.alerts.firstMatch
+        if permission.waitForExistence(timeout: 3) {
+            let allow = permission.buttons.matching(
+                NSPredicate(format: "label BEGINSWITH[c] 'Allow' OR label BEGINSWITH '允许'")
+            ).firstMatch
+            XCTAssertTrue(allow.exists)
+            allow.tap()
+        }
+        XCTAssertTrue(app.staticTexts["长图已保存到相册。"].waitForExistence(timeout: 15))
+        app.alerts["长卷"].buttons["好的"].tap()
         app.segmentedControls.buttons["拼接点"].tap()
         XCTAssertTrue(app.buttons["seam-0"].exists)
         app.buttons["下张顶部去重增加一个像素"].tap()

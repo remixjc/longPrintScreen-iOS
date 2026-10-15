@@ -31,8 +31,16 @@ jobs:
             -derivedDataPath /tmp/longshot-tests \
             -resultBundlePath /tmp/LongShot-CI.xcresult \
             CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= test
+      - name: Export UI screenshots
+        if: always()
+        run: |
+          if [ -d /tmp/LongShot-CI.xcresult ]; then
+            xcrun xcresulttool export attachments --path /tmp/LongShot-CI.xcresult --output-path /tmp/LongShot-Screenshots
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: iOS-test-results
-          path: /tmp/LongShot-CI.xcresult
+          path: |
+            /tmp/LongShot-CI.xcresult
+            /tmp/LongShot-Screenshots

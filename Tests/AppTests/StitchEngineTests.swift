@@ -55,6 +55,20 @@ final class StitchEngineTests: XCTestCase {
         XCTAssertEqual(urls.map(\.lastPathComponent), ["valid.jpg"])
     }
 
+    func testSharedInboxPublishesOnlyCompleteBatchesAndKeepsOrder() throws {
+        var (batch, folder) = try SharedStorage.create(source: "测试导入")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        batch.files = ["2.jpg", "0.jpg", "1.jpg"]
+        try SharedStorage.save(batch, directory: folder)
+        XCTAssertFalse(try SharedStorage.pending().contains { $0.0.id == batch.id })
+        batch.complete = true
+        try SharedStorage.save(batch, directory: folder)
+        let restored = try XCTUnwrap(SharedStorage.pending().first { $0.0.id == batch.id })
+        XCTAssertEqual(restored.0.files, ["2.jpg", "0.jpg", "1.jpg"])
+        XCTAssertEqual(SharedStorage.fileURLs(restored.0, directory: folder).map(\.lastPathComponent),
+                       ["2.jpg", "0.jpg", "1.jpg"])
+    }
+
     func testRecordingAuthorizationExpiresAndRevokes() {
         XCTAssertTrue(RecordingAuthorization.write(validUntil: Date().addingTimeInterval(60)))
         XCTAssertTrue(RecordingAuthorization.isValid)
@@ -84,6 +98,13 @@ final class PurchaseStoreTests: XCTestCase {
         let store = PurchaseStore(automaticallyLoad: false)
         await store.reload()
         XCTAssertEqual(Set(store.products.map(\.id)), [AppConfiguration.annualProduct, AppConfiguration.lifetimeProduct])
+        let annualProduct = try XCTUnwrap(store.products.first { $0.id == AppConfiguration.annualProduct })
+        XCTAssertEqual(annualProduct.price, Decimal(1))
+        XCTAssertEqual(annualProduct.subscription?.subscriptionPeriod.unit, .year)
+        XCTAssertEqual(annualProduct.subscription?.subscriptionPeriod.value, 1)
+        let lifetimeProduct = try XCTUnwrap(store.products.first { $0.id == AppConfiguration.lifetimeProduct })
+        XCTAssertEqual(lifetimeProduct.price, Decimal(6))
+        XCTAssertEqual(lifetimeProduct.type, .nonConsumable)
         XCTAssertFalse(store.hasPro)
         let annual = try await session.buyProduct(identifier: AppConfiguration.annualProduct)
         XCTAssertEqual(annual.productID, AppConfiguration.annualProduct)
