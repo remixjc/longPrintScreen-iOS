@@ -7,14 +7,14 @@
 | 环境 / 检查 | 结果 |
 | --- | --- |
 | Swift Package 核心与原生图片流水线 | 11 项通过 |
-| iOS 集成测试 | 9 项通过 |
+| iOS 集成测试 | 10 项通过 |
 | iOS 界面自动化 | 3 项通过 |
 | 主 App、相册分享扩展、ReplayKit 广播扩展 | Debug / Release 编译通过 |
 | iPhone 真机架构归档 | 已成功生成签名 `.xcarchive` |
 | App Store 分发导出 | 已成功生成 Apple Distribution 签名 IPA |
 | 签名、App Group 与共享钥匙串 | 主 App 与两个扩展已逐个校验 |
 
-完整 CI 通过记录：https://github.com/remixjc/longPrintScreen-iOS/actions/runs/38671740270
+最终代码的完整 CI 通过记录：https://github.com/remixjc/longPrintScreen-iOS/actions/runs/38674254858
 
 ## 自动化覆盖
 
@@ -29,6 +29,7 @@
 - 编码真实测试视频，再通过 AVAssetImageGenerator 提取变化帧。
 - StoreKit 商品价格和类型：年付 1、周期一年、终身 6、非消耗型。
 - 年度购买、到期失效、终身解锁、从已验证本地交易恢复权益、退款撤销。
+- 账号同步失败时不授予 Pro，显示错误并结束忙碌状态。
 - 首页示例导入、长图工作台、拼接点微调、排序裁剪入口、相册权限与真实保存。
 - 照片选择器取消、录屏使用说明、Pro 页面、隐私政策和页面返回。
 
