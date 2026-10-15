@@ -16,6 +16,8 @@
 
 更新后的[预览](screenshots/editor.png)、[拼接点](screenshots/seam.png)、[裁剪与排序](screenshots/arrangement.png)来自本次真机自动化。[连续长图样本](screenshots/continuous-stitch.png)来自原文逐像素对照的回归用例。
 
+CI 将 StoreKit 回归放在独立任务，避免本地交易服务卡住时阻塞图片 / 界面验收。每条测试设置 120 秒默认、180 秒最大执行时间；购买失败最多重启测试进程重试一次，失败仍使 CI 报错。
+
 可复现测试并保留输入 / 成品：
 
 ```sh
