@@ -11,7 +11,7 @@ jobs:
       - name: Install generator
         run: brew install xcodegen
       - name: Core algorithm tests
-        run: swift test --scratch-path /tmp/longshot-core
+        run: LONGSHOT_STITCH_ARTIFACTS=/tmp/LongShot-StitchRegression swift test --scratch-path /tmp/longshot-core
       - name: Generate project
         run: xcodegen generate
       - name: Build iOS app and extensions
@@ -37,6 +37,11 @@ jobs:
           if [ -d /tmp/LongShot-CI.xcresult ]; then
             xcrun xcresulttool export attachments --path /tmp/LongShot-CI.xcresult --output-path /tmp/LongShot-Screenshots
           fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Stitch-regression-images
+          path: /tmp/LongShot-StitchRegression
       - uses: actions/upload-artifact@v4
         if: always()
         with:

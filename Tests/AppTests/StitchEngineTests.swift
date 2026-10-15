@@ -46,7 +46,7 @@ final class StitchEngineTests: XCTestCase {
         let result = try await engine.render(analysis, overlaps: [320, 310], endCuts: [10, 20],
                                              top: 5, bottom: 5, preview: false)
         defer { try? FileManager.default.removeItem(at: result) }
-        XCTAssertEqual(try ImageFiles.size(at: result).height, 1710)
+        XCTAssertEqual(try ImageFiles.size(at: result).height, 1720)
     }
 
     func testManifestCannotEscapeBatchDirectory() {

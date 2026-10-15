@@ -2,7 +2,24 @@
 
 验证日期：2026 年 10 月 15 日。测试截图见 [screenshots](screenshots)。
 
-## 已通过的检查
+## Build 2：连续长截图修复
+
+修复真机反馈的整张堆叠问题：匹配图保留手机截图的纵向像素，使用分区亮度 / 边缘特征逐行搜索，再用像素细节校验和精修拼接点。匹配误差按内容对比度归一化，避免白底文字被低纹理阈值拒绝。固定栏允许时间 / 数字局部变化；合成保留首张顶部与末张底部，仅去除中间固定栏及重复正文。
+
+新增回归使用 CoreText 绘制的 1170 × 2532 中文阅读截图，包含固定顶栏、底栏、变化的时间 / 收藏数和滚动条。测试对照完整原文，检查中间没有缺行、重复正文或固定栏，并对首尾区域逐像素校验。覆盖 PNG、JPEG、乱序、无重叠、稀疏文字及重复排版歧义。
+
+本地 Swift Package 已通过原有与新增用例。图片流水线测试也加入 iOS 集成测试目标，确保同一批回归可以在手机和模拟器执行。
+
+可复现测试并保留输入 / 成品：
+
+```sh
+LONGSHOT_STITCH_ARTIFACTS="$PWD/artifacts/StitchRegression" \
+  swift test --scratch-path /tmp/longshot-core-build --jobs 2
+```
+
+不重叠、纯色或高度重复而不能可靠定位的图片仍提示手动调整；不能凭空补回没有拍到的正文。固定栏样式大幅变化时可在「顺序与裁剪」调整中间固定栏范围。
+
+## Build 1 的既有验证记录
 
 | 环境 / 检查 | 结果 |
 | --- | --- |
@@ -14,7 +31,7 @@
 | App Store 分发导出 | 已成功生成 Apple Distribution 签名 IPA |
 | 签名、App Group 与共享钥匙串 | 主 App 与两个扩展已逐个校验 |
 
-最终代码的完整 CI 通过记录：https://github.com/remixjc/longPrintScreen-iOS/actions/runs/38674254858
+此前代码的完整 CI 通过记录：https://github.com/remixjc/longPrintScreen-iOS/actions/runs/38674254858
 
 ## 自动化覆盖
 
@@ -45,7 +62,7 @@ StoreKit 模拟文件位于 `Tests/AppTests/Resources/Products.storekit`，用�
 
 ## 尚未完成的真实环境验收
 
-1. 可连接 iPhone 关闭了开发者模式，Xcode 报 `Developer Mode disabled`。需在设备「设置 → 隐私与安全性 → 开发者模式」开启并按系统提示重启 / 确认，才能运行开发包测试。
+1. iPhone 开发者模式已开启；本次自动真机测试启动时设备锁屏，Xcode 报 `Unlock Jacob's iPhone to Continue`，等待设备解锁才能执行。
 2. ReplayKit 跨 App 实际录屏、旋转、暂停恢复、控制中心入口，以及系统相册分享扩展的完整真机交互，必须在设备上验收。自动化已覆盖其共享数据与处理逻辑，但不能替代真实系统流程。
 3. App Store Connect 当前没有可用的网页登录会话。尚未完成 App 商店记录、真实订阅 / 终身商品和中国区价格档配置，也未上传 TestFlight 或提交审核。
 4. 正式商品价格、退款、购买恢复与到期需在实际 Sandbox / TestFlight 环境复验；本地 StoreKit 测试不会创建商店商品。

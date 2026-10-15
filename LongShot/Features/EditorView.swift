@@ -88,6 +88,8 @@ struct EditorView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(uncertain == 0 ? "重叠内容已自动去除" : "\(uncertain) 处未确定重叠，请检查拼接点")
                     .font(.subheadline)
+                Text(uncertain == 0 ? "保留首张顶部和末张底部，中间连续拼接" : "未匹配处尚未去重，请到「拼接点」调节去重范围")
+                    .font(.caption).foregroundStyle(Theme.muted)
                 if analysis.reordered {
                     Text("已按连续内容调整顺序").font(.caption).foregroundStyle(Theme.purple)
                 }
@@ -161,13 +163,13 @@ struct EditorView: View {
             VStack(alignment: .leading, spacing: 18) {
                 Card {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("固定区域裁剪").font(.headline)
+                        Text("中间固定栏去除").font(.headline)
                         Toggle("自动识别顶部 / 底部固定栏", isOn: $workspace.trimChrome)
                             .font(.subheadline).tint(Theme.green)
-                        Text("修改开关后点重新识别；也可以手动调整裁剪范围。").font(.caption).foregroundStyle(Theme.muted)
+                        Text("首张顶部和末张底部会保留，只去除中间重复的固定栏。修改开关后点重新识别。").font(.caption).foregroundStyle(Theme.muted)
                         let maxCrop = max(0, (analysis.heights.min() ?? 100) / 3)
-                        pixelSlider("顶部裁剪", value: $workspace.top, max: maxCrop)
-                        pixelSlider("底部裁剪", value: $workspace.bottom, max: maxCrop)
+                        pixelSlider("中间顶部固定栏", value: $workspace.top, max: maxCrop)
+                        pixelSlider("中间底部固定栏", value: $workspace.bottom, max: maxCrop)
                         Button("重新识别拼接点") { Task { await workspace.reanalyze() } }
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.purple)
                     }

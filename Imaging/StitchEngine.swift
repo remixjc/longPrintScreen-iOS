@@ -59,18 +59,45 @@ actor StitchEngine {
         let heights = shots.map { max(1, Int(Double($0.height) * Double(width) / Double($0.width))) }
         // Matching happens on proportionate grids, not stretched images.
         let maxHeight = heights.max()!
-        let scale = min(1, 800.0 / Double(maxHeight))
+        let scale = min(1, 4000.0 / Double(maxHeight))
         grids = try shots.enumerated().map { index, shot in
-            try ImageFiles.grid(ImageFiles.image(at: shot.url), width: 40, height: max(24, Int(Double(heights[index]) * scale)))
+            let height = max(24, Int(Double(heights[index]) * scale))
+            return try ImageFiles.grid(ImageFiles.image(at: shot.url, maxDimension: max(width, height)), height: height)
         }
         let insets = trimChrome ? StitchMatcher.fixedInsets(grids) : (top: 0, bottom: 0)
         let cropped = grids.map { $0.cropped(top: insets.top, bottom: insets.bottom) }
         let result = StitchMatcher.order(cropped, automatic: automatic)
+        let top = Int((Double(insets.top) / scale).rounded())
+        let bottom = Int((Double(insets.bottom) / scale).rounded())
+        var overlaps = result.matches.map { $0.isReliable ? Int((Double($0.overlap) / scale).rounded()) : 0 }
+        // Only adjacent, already verified matches need full-height refinement.
+        // Preserve every output row for phone screenshots; cap exceptionally
+        // tall imported images to keep decoding and matching memory bounded.
+        let detailScale = min(1, 6000.0 / Double(maxHeight))
+        var detailed: [Int: PixelGrid] = [:]
+        func detail(_ index: Int) throws -> PixelGrid {
+            if scale == 1 { return cropped[index] }
+            if let grid = detailed[index] { return grid }
+            let height = max(24, Int(Double(heights[index]) * detailScale))
+            let image = try ImageFiles.image(at: shots[index].url, maxDimension: max(width, height))
+            let grid = try ImageFiles.grid(image, height: height)
+                .cropped(top: Int(Double(top) * detailScale), bottom: Int(Double(bottom) * detailScale))
+            detailed[index] = grid
+            return grid
+        }
+        for index in overlaps.indices where result.matches[index].isReliable {
+            try Task.checkCancellation()
+            let upper = try detail(result.indices[index])
+            let lower = try detail(result.indices[index + 1])
+            let refined = StitchMatcher.refine(upper, lower, overlap: Int(Double(overlaps[index]) * detailScale),
+                                               radius: max(3, Int(ceil(3 * detailScale / scale))))
+            overlaps[index] = Int((Double(refined) / detailScale).rounded())
+        }
         return StitchAnalysis(
             shots: result.indices.map { shots[$0] },
-            overlaps: result.matches.map { $0.isReliable ? Int(Double($0.overlap) / scale) : 0 },
+            overlaps: overlaps,
             confidences: result.matches.map(\.confidence),
-            top: Int(Double(insets.top) / scale), bottom: Int(Double(insets.bottom) / scale),
+            top: top, bottom: bottom,
             reordered: result.changed, duplicates: duplicates, width: width,
             heights: result.indices.map { heights[$0] }
         )

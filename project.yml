@@ -11,7 +11,7 @@ settings:
     DEVELOPMENT_TEAM: 6NZHLN3MUD
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "2"
     TARGETED_DEVICE_FAMILY: "1,2"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 packages:
@@ -70,7 +70,9 @@ targets:
   LongShotTests:
     type: bundle.unit-test
     platform: iOS
-    sources: Tests/AppTests
+    sources:
+      - Tests/AppTests
+      - Tests/ImagingTests
     dependencies:
       - target: LongShot
     settings:

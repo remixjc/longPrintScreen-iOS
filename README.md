@@ -4,9 +4,9 @@
 
 ## 功能
 
-- 按选择顺序导入最多 20 张图片，自动识别重叠、移除完全重复图片、识别固定顶部/底部区域。
+- 按选择顺序导入最多 20 张图片，自动识别重叠、移除完全重复图片、识别固定顶部/底部区域；仅保留首张顶部和末张底部，中间拼成连续正文。
 - 根据连续重叠内容尝试纠正乱序。只在能形成可靠连续链时重排，模糊或无重叠时保留原顺序并提示。
-- 每个拼接点单独调节下图顶部去重和上图底部裁剪，支持逐像素微调、图片换序、全局裁剪。
+- 每个拼接点单独调节下图顶部去重和上图底部裁剪，支持逐像素微调、图片换序、中间固定栏范围调整。
 - 可移除录屏中的切换页面或多余图片，至少保留两张；原始相册照片不会删除。
 - 长图预览、双指/双击缩放、PNG 导出、保存相册、系统分享。超大图最多约 3200 万像素，自动缩小控制内存。
 - Photos 分享扩展：相册多选 → 分享 →「导入长卷」→ 回到长卷首页导入。
@@ -54,6 +54,6 @@ App ID 为 `com.remixjc.longPrintScreen`，两个扩展后缀为 `.share` 和 `.
 
 完整配置和必须在真机 / App Store Connect 完成的验收见 [上架说明](docs/RELEASE.md)。ReplayKit 跨 App 录屏不能用模拟器测试代替；模拟器购买使用 StoreKit 本地环境，不能代替沙盒或 TestFlight 验证。
 
-已完成的构建、24 项自动化测试、签名与剩余真实环境限制见 [验证记录](docs/TESTING.md)。运行截图见 [首页](docs/screenshots/home.png)、[拼接预览](docs/screenshots/editor.png)、[拼接点微调](docs/screenshots/seam.png) 和 [录屏说明](docs/screenshots/recording.png)。
+构建、自动化测试、签名与剩余真实环境限制见 [验证记录](docs/TESTING.md)。运行截图见 [首页](docs/screenshots/home.png)、[拼接预览](docs/screenshots/editor.png)、[拼接点微调](docs/screenshots/seam.png) 和 [录屏说明](docs/screenshots/recording.png)。
 
 图片不上传、不修改原图；待导入内容在设备本地保留最多七天，并可主动删除。见 [隐私政策](docs/PRIVACY.md) 与 [使用条款](docs/TERMS.md)。

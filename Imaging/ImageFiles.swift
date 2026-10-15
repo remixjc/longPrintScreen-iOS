@@ -33,13 +33,13 @@ enum ImageFiles {
         return [5, 6, 7, 8].contains(orientation) ? (h, w) : (w, h)
     }
 
-    static func grid(_ image: CGImage, width: Int = 40, height: Int = 800) throws -> PixelGrid {
+    static func grid(_ image: CGImage, width: Int = 128, height: Int = 1000) throws -> PixelGrid {
         var pixels = Array(repeating: UInt8(0), count: width * height)
         let success = pixels.withUnsafeMutableBytes { bytes -> Bool in
             guard let context = CGContext(data: bytes.baseAddress, width: width, height: height,
                                           bitsPerComponent: 8, bytesPerRow: width,
                                           space: CGColorSpaceCreateDeviceGray(), bitmapInfo: 0) else { return false }
-            context.interpolationQuality = .low
+            context.interpolationQuality = .high
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
             return true
         }

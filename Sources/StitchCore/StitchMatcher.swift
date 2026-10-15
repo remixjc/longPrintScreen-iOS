@@ -40,80 +40,141 @@ public enum StitchMatcher {
     /// Compares the lower part of a screenshot with the upper part of the next.
     /// Flat or repeated content cannot establish a reliable scrolling offset.
     public static func match(_ upper: PixelGrid, _ lower: PixelGrid) -> OverlapMatch {
-        guard upper.width == lower.width, min(upper.height, lower.height) >= 24 else { return .none }
+        guard upper.width == lower.width, upper.width >= 4,
+              min(upper.height, lower.height) >= 24 else { return .none }
         let minOverlap = max(16, min(upper.height, lower.height) / 14)
         let maxOverlap = min(upper.height - 8, lower.height - 8)
         guard maxOverlap >= minOverlap else { return .none }
         var candidates: [(Int, Double)] = []
-        let coarseStep = max(1, min(upper.height, lower.height) / 180)
-        for overlap in stride(from: minOverlap, through: maxOverlap, by: coarseStep) {
-            candidates.append((overlap, difference(upper, lower, overlap: overlap)))
+        let a = rowProfiles(upper), b = rowProfiles(lower)
+        // Search every row. Skipping offsets can miss the only alignment of
+        // thin text strokes; compact row profiles make this search inexpensive.
+        for overlap in minOverlap...maxOverlap {
+            var error = 0.0
+            for row in stride(from: 0, to: overlap, by: max(1, overlap / 60)) {
+                for bin in 0..<16 {
+                    error += abs(a[(upper.height - overlap + row) * 16 + bin] - b[row * 16 + bin])
+                }
+            }
+            candidates.append((overlap, error / Double((overlap + max(1, overlap / 60) - 1) / max(1, overlap / 60))))
         }
-        let seeds = candidates.sorted { $0.1 < $1.1 }.prefix(8)
+        var seeds: [Int] = []
+        for candidate in candidates.sorted(by: { $0.1 < $1.1 }) {
+            if seeds.allSatisfy({ abs($0 - candidate.0) > 3 }) { seeds.append(candidate.0) }
+            if seeds.count == 16 { break }
+        }
         var refined: [Int: Double] = [:]
-        for (seed, _) in seeds {
-            for overlap in max(minOverlap, seed - coarseStep)...min(maxOverlap, seed + coarseStep) {
+        for seed in seeds {
+            for overlap in max(minOverlap, seed - 2)...min(maxOverlap, seed + 2) {
                 refined[overlap] = difference(upper, lower, overlap: overlap)
             }
         }
-        let sorted = refined.sorted { $0.value < $1.value }
+        // Recheck the strongest candidates using every row. Periodic text line
+        // spacing must not alias against the sampling interval.
+        var finalists: [Int] = []
+        for candidate in refined.sorted(by: { $0.value < $1.value }) {
+            if finalists.allSatisfy({ abs($0 - candidate.key) > 5 }) { finalists.append(candidate.key) }
+            if finalists.count == 8 { break }
+        }
+        finalists = Array(Set(finalists.flatMap {
+            Array(max(minOverlap, $0 - 2)...min(maxOverlap, $0 + 2))
+        })).sorted()
+        for candidate in finalists {
+            refined[candidate] = difference(upper, lower, overlap: candidate, everyRow: true)
+        }
+        let sorted = finalists.map { (key: $0, value: refined[$0]!) }.sorted { $0.value < $1.value }
         guard let best = sorted.first else { return .none }
-        let detail = texture(lower, rows: best.key)
-        guard detail > 0.018, best.value < 0.105 else { return .none }
+        guard best.value < 0.38 else { return .none }
         // Adjacent offsets are naturally similar; distant alternatives indicate ambiguity.
-        let distant = candidates.filter { abs($0.0 - best.key) > max(5, coarseStep * 2) }
-            .map(\.1).min() ?? 1
-        let separation = max(0, min(1, (distant - best.value) / 0.045))
-        let accuracy = max(0, 1 - best.value / 0.105)
+        let distant = sorted.filter { abs($0.key - best.key) > 5 }
+            .map(\.value).min() ?? 1
+        // Measure separation relative to the content's contrast. Sparse dark
+        // glyphs on white have tiny absolute errors even at the wrong offset.
+        let separation = max(0, min(1, (distant - best.value) / max(0.015, distant)))
+        let accuracy = max(0, 1 - best.value)
         let confidence = min(1, accuracy * (0.65 + separation * 0.35))
         return OverlapMatch(overlap: best.key, confidence: confidence, error: best.value)
     }
 
-    private static func difference(_ a: PixelGrid, _ b: PixelGrid, overlap: Int) -> Double {
+    private static func rowProfiles(_ grid: PixelGrid) -> [Double] {
+        var result = [Double](repeating: 0, count: grid.height * 16)
+        let margin = max(1, grid.width / 10)
+        for y in 0..<grid.height {
+            for bin in 0..<8 {
+                let start = margin + (grid.width - 2 * margin) * bin / 8
+                let end = max(start + 1, margin + (grid.width - 2 * margin) * (bin + 1) / 8)
+                var sum = 0, edges = 0
+                for x in start..<end {
+                    let value = Int(grid.pixels[y * grid.width + x])
+                    sum += value
+                    edges += abs(value - Int(grid.pixels[y * grid.width + max(0, x - 1)]))
+                }
+                result[y * 16 + bin * 2] = Double(sum) / Double(end - start)
+                result[y * 16 + bin * 2 + 1] = Double(edges) / Double(end - start)
+            }
+        }
+        return result
+    }
+
+    private static func difference(_ a: PixelGrid, _ b: PixelGrid, overlap: Int, everyRow: Bool = false) -> Double {
         var sum = 0.0
+        var detail = 0.0
         var count = 0
-        let rowStep = max(1, overlap / 60)
+        let rowStep = everyRow ? 1 : max(1, overlap / 90)
         // Ignore outer margins, where scroll indicators and floating UI often live.
         let margin = max(1, a.width / 10)
         for row in stride(from: 0, to: overlap, by: rowStep) {
             let aStart = (a.height - overlap + row) * a.width
             let bStart = row * b.width
-            for column in margin..<(a.width - margin) {
-                sum += Double(abs(Int(a.pixels[aStart + column]) - Int(b.pixels[bStart + column])))
+            for column in stride(from: margin, to: a.width - margin, by: max(1, a.width / 64)) {
+                let ai = aStart + column, bi = bStart + column
+                let av = Int(a.pixels[ai]), bv = Int(b.pixels[bi])
+                sum += Double(abs(av - bv))
+                let ah = abs(av - Int(a.pixels[ai - 1]))
+                let bh = abs(bv - Int(b.pixels[bi - 1]))
+                let verticalA = ai >= a.width ? abs(av - Int(a.pixels[ai - a.width])) : 0
+                let verticalB = bi >= b.width ? abs(bv - Int(b.pixels[bi - b.width])) : 0
+                detail += Double(max(ah, bh) + max(verticalA, verticalB))
                 count += 1
             }
         }
-        return count > 0 ? sum / Double(count) / 255 : 1
+        guard count > 0, detail / Double(count) > 0.5 else { return 1 }
+        return sum / detail
     }
 
-    private static func texture(_ grid: PixelGrid, rows: Int) -> Double {
-        var value = 0.0
-        var count = 0
-        let step = max(1, rows / 60)
-        for row in stride(from: 1, to: rows, by: step) {
-            for x in 1..<grid.width {
-                let index = row * grid.width + x
-                value += Double(abs(Int(grid.pixels[index]) - Int(grid.pixels[index - grid.width])))
-                count += 1
-            }
+    /// Resolve the coarse estimate at output-row precision so a downsampled
+    /// match does not duplicate or omit a few rows of text at each seam.
+    public static func refine(_ upper: PixelGrid, _ lower: PixelGrid,
+                              overlap: Int, radius: Int) -> Int {
+        guard upper.width == lower.width, upper.width >= 4 else { return overlap }
+        let start = max(8, overlap - radius)
+        let end = min(min(upper.height, lower.height) - 1, overlap + radius)
+        guard start <= end else { return overlap }
+        var best = overlap, error = Double.infinity
+        for candidate in start...end {
+            let value = difference(upper, lower, overlap: candidate, everyRow: true)
+            if value < error { best = candidate; error = value }
         }
-        return count > 0 ? value / Double(count) / 255 : 0
+        return best
     }
 
     public static func fixedInsets(_ grids: [PixelGrid]) -> (top: Int, bottom: Int) {
-        guard let first = grids.first, grids.count > 1,
+        guard let first = grids.first, first.width >= 4, grids.count > 1,
               grids.allSatisfy({ $0.width == first.width && $0.height == first.height }) else { return (0, 0) }
         // A duplicate alone cannot prove a fixed header: skip duplicates.
-        let others = grids.dropFirst().filter { meanDifference(first, $0) > 0.01 }
+        let others = grids.dropFirst().filter { meanDifference(first, $0) > 0.001 }
         guard !others.isEmpty else { return (0, 0) }
         func isFixed(_ row: Int) -> Bool {
             others.allSatisfy { other in
-                var error = 0
+                var differences: [Int] = []
                 let margin = max(1, first.width / 8)
                 for x in margin..<(first.width - margin) {
-                    error += abs(Int(first.pixels[row * first.width + x]) - Int(other.pixels[row * first.width + x]))
+                    differences.append(abs(Int(first.pixels[row * first.width + x]) - Int(other.pixels[row * first.width + x])))
                 }
-                return Double(error) / Double(first.width - 2 * margin) / 255 < 0.018
+                // Clocks, battery indicators and badges may change inside fixed
+                // UI. Ignore localized differences instead of stopping at them.
+                let kept = differences.sorted().prefix(max(1, differences.count * 4 / 5))
+                return Double(kept.reduce(0, +)) / Double(kept.count) / 255 < 0.012
             }
         }
         var top = 0
@@ -141,16 +202,24 @@ public enum StitchMatcher {
         let n = grids.count
         guard n > 1 else { return OrderingResult(indices: Array(0..<n), matches: [], changed: false, reliable: true) }
         var matrix = Array(repeating: Array(repeating: OverlapMatch.none, count: n), count: n)
-        for i in 0..<n {
-            for j in 0..<n where i != j && (automatic || j == i + 1) {
-                matrix[i][j] = match(grids[i], grids[j])
-            }
+        for i in 0..<(n - 1) {
+            matrix[i][i + 1] = match(grids[i], grids[i + 1])
         }
         let original = Array(0..<n)
         let originalMatches = (0..<(n - 1)).map { matrix[$0][$0 + 1] }
+        // Merely plausible edges can occur between repeated text layouts.
+        // Skip the order search only for near-exact original alignments.
+        if originalMatches.allSatisfy({ $0.isReliable && $0.confidence >= 0.98 }) {
+            return OrderingResult(indices: original, matches: originalMatches, changed: false, reliable: true)
+        }
         guard automatic, n <= 24 else {
             return OrderingResult(indices: original, matches: originalMatches, changed: false,
                                   reliable: originalMatches.allSatisfy(\.isReliable))
+        }
+        for i in 0..<n {
+            for j in 0..<n where i != j && j != i + 1 {
+                matrix[i][j] = match(grids[i], grids[j])
+            }
         }
         struct Path { var indices: [Int]; var score: Double }
         var paths = (0..<n).map { Path(indices: [$0], score: 0) }
