@@ -21,3 +21,18 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath /tmp/longshot-ci \
             CODE_SIGNING_ALLOWED=NO build
+      - name: Run iOS integration and UI tests
+        timeout-minutes: 20
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(d["udid"] for runtime,devices in data["devices"].items() if "iOS" in runtime for d in devices if d["name"].startswith("iPhone")))')
+          xcodebuild -project LongShot.xcodeproj -scheme LongShot \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 \
+            -derivedDataPath /tmp/longshot-tests \
+            -resultBundlePath /tmp/LongShot-CI.xcresult \
+            CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iOS-test-results
+          path: /tmp/LongShot-CI.xcresult

@@ -85,7 +85,7 @@ struct RecordingView: View {
             }.navigationTitle("录屏").navigationBarTitleDisplayMode(.inline)
                 .sheet(isPresented: $showPro) { PaywallView() }
                 .sheet(isPresented: $showVideoPicker) {
-                    VideoPicker { url in
+                    VideoPicker(onError: { workspace.message = $0 }) { url in
                         Task {
                             defer { try? FileManager.default.removeItem(at: url) }
                             guard purchases.hasPro else { return }
@@ -122,6 +122,7 @@ struct BroadcastPicker: UIViewRepresentable {
 }
 
 struct VideoPicker: UIViewControllerRepresentable {
+    let onError: (String) -> Void
     let onVideo: (URL) -> Void
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var config = PHPickerConfiguration()
@@ -132,20 +133,29 @@ struct VideoPicker: UIViewControllerRepresentable {
         return picker
     }
     func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-    func makeCoordinator() -> Coordinator { Coordinator(onVideo) }
+    func makeCoordinator() -> Coordinator { Coordinator(onVideo, onError: onError) }
     final class Coordinator: NSObject, PHPickerViewControllerDelegate {
         let completion: (URL) -> Void
-        init(_ completion: @escaping (URL) -> Void) { self.completion = completion }
+        let onError: (String) -> Void
+        init(_ completion: @escaping (URL) -> Void, onError: @escaping (String) -> Void) {
+            self.completion = completion
+            self.onError = onError
+        }
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             picker.dismiss(animated: true)
             guard let provider = results.first?.itemProvider else { return }
             provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, error in
-                guard error == nil, let url else { return }
+                guard error == nil, let url else {
+                    DispatchQueue.main.async { self.onError(error?.localizedDescription ?? "无法读取所选视频。") }
+                    return
+                }
                 let copy = FileManager.default.temporaryDirectory.appendingPathComponent("recording-\(UUID().uuidString).mov")
                 do {
                     try FileManager.default.copyItem(at: url, to: copy)
                     DispatchQueue.main.async { self.completion(copy) }
-                } catch { /* The source remains in Photos if copying fails. */ }
+                } catch {
+                    DispatchQueue.main.async { self.onError("导入视频失败：\(error.localizedDescription)") }
+                }
             }
         }
     }
