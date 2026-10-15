@@ -428,23 +428,23 @@
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					00FAEA559AD0FDD82995336C = {
-						DevelopmentTeam = M898TXZKKP;
+						DevelopmentTeam = 6NZHLN3MUD;
 						ProvisioningStyle = Automatic;
 					};
 					1DBFA875F0142456220292CB = {
-						DevelopmentTeam = M898TXZKKP;
+						DevelopmentTeam = 6NZHLN3MUD;
 						ProvisioningStyle = Automatic;
 					};
 					997B31EA916C0372E94FAFDD = {
-						DevelopmentTeam = M898TXZKKP;
+						DevelopmentTeam = 6NZHLN3MUD;
 						ProvisioningStyle = Automatic;
 					};
 					B06E98C623D2D5B72141B90C = {
-						DevelopmentTeam = M898TXZKKP;
+						DevelopmentTeam = 6NZHLN3MUD;
 						ProvisioningStyle = Automatic;
 					};
 					C819255691E89EBED7761006 = {
-						DevelopmentTeam = M898TXZKKP;
+						DevelopmentTeam = 6NZHLN3MUD;
 						ProvisioningStyle = Automatic;
 						TestTargetID = 997B31EA916C0372E94FAFDD;
 					};
@@ -785,7 +785,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = M898TXZKKP;
+				DEVELOPMENT_TEAM = 6NZHLN3MUD;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -871,7 +871,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = M898TXZKKP;
+				DEVELOPMENT_TEAM = 6NZHLN3MUD;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;

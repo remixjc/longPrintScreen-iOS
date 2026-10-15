@@ -77,6 +77,18 @@ final class StitchEngineTests: XCTestCase {
         RecordingAuthorization.write(validUntil: nil)
         XCTAssertFalse(RecordingAuthorization.isValid)
     }
+
+    @MainActor
+    func testPreviewRefreshDoesNotDeleteFileBeingShared() async throws {
+        let model = WorkspaceModel()
+        await model.loadDemo()
+        let candidate = await model.export()
+        let exported = try XCTUnwrap(candidate)
+        await model.updatePreview()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: exported.path))
+        model.closeEditor()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: exported.path))
+    }
 }
 
 @MainActor

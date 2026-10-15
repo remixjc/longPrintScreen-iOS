@@ -49,7 +49,7 @@ xcodebuild -project LongShot.xcodeproj -scheme LongShot \
 
 ## 真机与上架
 
-App ID 为 `com.remixjc.longPrintScreen`，两个扩展后缀为 `.share` 和 `.broadcast`。App Group 为 `group.com.remixjc.longPrintScreen`。主 App 和录屏扩展需共享钥匙串访问组。默认开发 Team 取本机已有开发证书的 `M898TXZKKP`，请在上架前确认所属账号正确。
+App ID 为 `com.remixjc.longPrintScreen`，两个扩展后缀为 `.share` 和 `.broadcast`。App Group 为 `group.com.remixjc.longPrintScreen`。主 App 和录屏扩展需共享钥匙串访问组。默认 Team 为本机已成功签名归档的 `6NZHLN3MUD`。可执行 `scripts/archive.sh` 归档并导出分发包；发布前仍需确认账号主体与商店资料一致。
 
 完整配置和必须在真机 / App Store Connect 完成的验收见 [上架说明](docs/RELEASE.md)。ReplayKit 跨 App 录屏不能用模拟器测试代替；模拟器购买使用 StoreKit 本地环境，不能代替沙盒或 TestFlight 验证。
 

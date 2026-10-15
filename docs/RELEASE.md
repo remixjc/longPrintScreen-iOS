@@ -4,7 +4,7 @@
 
 ## 1. 签名
 
-在 Xcode 登录开发者账号，确认正确 Team。当前项目默认 Team `M898TXZKKP`，本机另有 `6NZHLN3MUD` 的分发证书，不能据此假定两者属于同一个发布账号。
+项目使用已成功完成本机签名归档的 Team `6NZHLN3MUD`。已验证主 App 的 App Group 与共享钥匙串签名。归档时，Xcode 自动签名生成了对应描述文件。更换账号时，需在 Xcode 登录新账号并重新配置这些能力；不要只替换 Team 字符串就直接发布。
 
 在开发者后台注册：
 
@@ -75,7 +75,13 @@
 
 ## 5. 归档与上传
 
-先在真机通过验收，再使用正确发布 Team：
+已准备自动归档和导出脚本。先在真机通过验收，再使用正确发布 Team：
+
+```sh
+scripts/archive.sh
+```
+
+脚本输出到被 Git 忽略的 `artifacts/`，只导出本地分发包。也可手动归档：
 
 ```sh
 xcodebuild -project LongShot.xcodeproj -scheme LongShot \

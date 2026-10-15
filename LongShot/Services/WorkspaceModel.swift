@@ -138,7 +138,9 @@ final class WorkspaceModel: ObservableObject {
                 return
             }
             if let previous = previewURL { try? FileManager.default.removeItem(at: previous) }
-            if let exportURL { try? FileManager.default.removeItem(at: exportURL); self.exportURL = nil }
+            // A debounced preview may finish while Photos or the share sheet
+            // is still consuming an export. Keep that file until the next export
+            // or until editing ends; exports always render current settings.
             previewURL = url
             preview = UIImage(contentsOfFile: url.path)
         } catch is CancellationError {
