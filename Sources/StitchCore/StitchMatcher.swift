@@ -118,12 +118,16 @@ public enum StitchMatcher {
               min(upper.height, lower.height) >= 80 else { return .none }
         let a = rowProfiles(upper), b = rowProfiles(lower)
         let minimum = max(24, min(upper.height, lower.height) / 50)
-        let texturedRows = (0..<lower.height).filter { row in
-            (0..<8).reduce(0.0) { $0 + b[row * 16 + $1 * 2 + 1] } > 4
+        var texturedRows: [Int] = []
+        for row in 0..<lower.height {
+            var texture = 0.0
+            for bin in 0..<8 { texture += b[row * 16 + bin * 2 + 1] }
+            if texture > 4 { texturedRows.append(row) }
         }
         guard !texturedRows.isEmpty else { return .none }
-        let anchors = (0..<min(160, texturedRows.count)).map {
-            texturedRows[$0 * texturedRows.count / min(160, texturedRows.count)]
+        let anchorCount = min(160, texturedRows.count)
+        let anchors: [Int] = (0..<anchorCount).map { index in
+            texturedRows[index * texturedRows.count / anchorCount]
         }
         var candidates: [(shift: Int, votes: Double)] = []
         for shift in 8...(upper.height - minimum) {
