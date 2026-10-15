@@ -102,7 +102,7 @@ StoreKit 模拟文件位于 `Tests/AppTests/Resources/Products.storekit`，用�
 
 1. iPhone 开发者模式已开启，解锁后集成测试已通过。相册保存触发的系统 Face ID 验证需要机主配合，自动化未完成此步。
 2. ReplayKit 跨 App 实际录屏、旋转、暂停恢复、控制中心入口，以及系统相册分享扩展的完整真机交互，必须在设备上验收。自动化已覆盖其共享数据与处理逻辑，但不能替代真实系统流程。
-3. App Store Connect 当前没有可用的网页登录会话。尚未完成 App 商店记录、真实订阅 / 终身商品和中国区价格档配置，也未上传 TestFlight 或提交审核。
+3. 2026 年 10 月 15 日已登录 App Store Connect，创建商店记录、配置仅中国大陆供应及年度 ¥1 / 终身 ¥6 商品，上传和关联构建 `1.0.0 (4)`，并连同两个商品和订阅群组正式提交，后台均为「等待审核」。真实 Sandbox / TestFlight 交易仍待验证。后台操作与账户事项见 [发布记录](APP_STORE_SUBMISSION.md)。
 4. 正式商品价格、退款、购买恢复与到期需在实际 Sandbox / TestFlight 环境复验；本地 StoreKit 测试不会创建商店商品。
 
 发布配置、元数据和逐项验收流程见 [RELEASE.md](RELEASE.md)。

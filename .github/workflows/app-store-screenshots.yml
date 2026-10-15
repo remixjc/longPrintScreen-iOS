@@ -51,4 +51,8 @@ jobs:
         if: always()
         with:
           name: AppStore-screenshots-${{ matrix.device }}
-          path: /tmp/LongShot-Store-Screenshots
+          path: |
+            /tmp/LongShot-Store-Screenshots/*.png
+            /tmp/LongShot-Store-Screenshots/*.jpg
+            /tmp/LongShot-Store-Screenshots/*.jpeg
+            /tmp/LongShot-Store-Screenshots/manifest.json
