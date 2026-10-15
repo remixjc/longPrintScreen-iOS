@@ -46,4 +46,23 @@ enum ImageFiles {
         guard success else { throw StorageError.invalidImage }
         return PixelGrid(width: width, height: height, pixels: pixels)
     }
+
+    static func removingScrollIndicator(_ image: CGImage) throws -> CGImage {
+        let width = min(512, image.width)
+        let grid = try grid(image, width: width, height: image.height)
+        guard let indicator = ScrollIndicator.find(in: grid) else { return image }
+        let scale = Double(image.width) / Double(width)
+        let left = Int((Double(indicator.left) * scale).rounded(.down))
+        let right = min(image.width, Int((Double(indicator.right) * scale).rounded(.up)))
+        let height = indicator.bottom - indicator.top
+        guard let strip = image.cropping(to: CGRect(x: max(0, left - 3), y: indicator.top, width: 1, height: height)),
+              let context = CGContext(data: nil, width: image.width, height: image.height,
+                                      bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return image }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        context.interpolationQuality = .none
+        context.draw(strip, in: CGRect(x: left, y: image.height - indicator.bottom, width: right - left, height: height))
+        return context.makeImage() ?? image
+    }
 }

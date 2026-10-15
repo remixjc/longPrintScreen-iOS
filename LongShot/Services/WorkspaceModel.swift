@@ -123,7 +123,7 @@ final class WorkspaceModel: ObservableObject {
         let result = try await engine.analyze(urls: urls, automatic: autoOrder ?? automaticOrder, trimChrome: trimChrome)
         analysis = result
         overlaps = result.overlaps
-        endCuts = Array(repeating: 0, count: result.shots.count - 1)
+        endCuts = result.endCuts
         top = result.top
         bottom = result.bottom
         showEditor = true

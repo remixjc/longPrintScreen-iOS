@@ -139,7 +139,7 @@ struct EditorView: View {
                             HStack {
                                 Button("恢复此处自动值") {
                                     workspace.overlaps[index] = analysis.overlaps[index]
-                                    workspace.endCuts[index] = 0
+                                    workspace.endCuts[index] = analysis.endCuts[index]
                                     workspace.schedulePreview()
                                 }.font(.subheadline).foregroundStyle(Theme.purple)
                                 Spacer()

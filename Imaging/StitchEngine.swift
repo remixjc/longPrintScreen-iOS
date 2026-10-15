@@ -15,6 +15,7 @@ struct Shot: Identifiable, Sendable {
 struct StitchAnalysis: Sendable {
     var shots: [Shot]
     var overlaps: [Int]
+    var endCuts: [Int]
     var confidences: [Double]
     var top: Int
     var bottom: Int
@@ -22,6 +23,7 @@ struct StitchAnalysis: Sendable {
     var duplicates: Int
     var width: Int
     var heights: [Int]
+    var cleanIndicators: Bool
 }
 
 enum StitchError: LocalizedError {
@@ -66,7 +68,7 @@ actor StitchEngine {
         }
         let insets = trimChrome ? StitchMatcher.fixedInsets(grids) : (top: 0, bottom: 0)
         let cropped = grids.map { $0.cropped(top: insets.top, bottom: insets.bottom) }
-        let result = StitchMatcher.order(cropped, automatic: automatic)
+        let result = StitchMatcher.order(cropped, automatic: automatic, allowOcclusion: trimChrome)
         let top = Int((Double(insets.top) / scale).rounded())
         let bottom = Int((Double(insets.bottom) / scale).rounded())
         var overlaps = result.matches.map { $0.isReliable ? Int((Double($0.overlap) / scale).rounded()) : 0 }
@@ -86,20 +88,36 @@ actor StitchEngine {
             return grid
         }
         for index in overlaps.indices where result.matches[index].isReliable {
+            let match = result.matches[index]
+            if match.seam != nil && scale == detailScale { continue }
             try Task.checkCancellation()
             let upper = try detail(result.indices[index])
             let lower = try detail(result.indices[index + 1])
+            let sampleRows = match.seam.map { seam -> Range<Int> in
+                let row = Int(Double(seam) * detailScale / scale)
+                return max(0, row - 4)..<min(lower.height, row + max(16, Int(32 * detailScale / scale)))
+            }
             let refined = StitchMatcher.refine(upper, lower, overlap: Int(Double(overlaps[index]) * detailScale),
-                                               radius: max(3, Int(ceil(3 * detailScale / scale))))
+                                               radius: max(3, Int(ceil(3 * detailScale / scale))), sampleRows: sampleRows)
             overlaps[index] = Int((Double(refined) / detailScale).rounded())
+        }
+        var endCuts = Array(repeating: 0, count: overlaps.count)
+        for index in overlaps.indices {
+            let match = result.matches[index]
+            guard match.isReliable, let seam = match.seam else { continue }
+            let start = Int((Double(seam) / scale).rounded())
+            endCuts[index] = overlaps[index] - start
+            overlaps[index] = start
         }
         return StitchAnalysis(
             shots: result.indices.map { shots[$0] },
             overlaps: overlaps,
+            endCuts: endCuts,
             confidences: result.matches.map(\.confidence),
             top: top, bottom: bottom,
             reordered: result.changed, duplicates: duplicates, width: width,
-            heights: result.indices.map { heights[$0] }
+            heights: result.indices.map { heights[$0] },
+            cleanIndicators: trimChrome && result.matches.allSatisfy(\.isReliable)
         )
     }
 
@@ -128,7 +146,8 @@ actor StitchEngine {
             try autoreleasepool {
                 let nativeScale = Double(outputWidth) / Double(shot.width)
                 let maxDimension = max(outputWidth, Int(Double(shot.height) * nativeScale))
-                let image = try ImageFiles.image(at: shot.url, maxDimension: maxDimension)
+                var image = try ImageFiles.image(at: shot.url, maxDimension: maxDimension)
+                if analysis.cleanIndicators { image = try ImageFiles.removingScrollIndicator(image) }
                 let range = ranges[index]
                 let imageScale = Double(image.height) / Double(analysis.heights[index])
                 let y = Int(Double(range.start) * imageScale)

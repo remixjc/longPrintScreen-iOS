@@ -25,6 +25,14 @@ public struct OverlapMatch: Sendable, Equatable {
     public let overlap: Int
     public let confidence: Double
     public let error: Double
+    /// A safe join row in the lower image, when an overlay obscures the edges.
+    public let seam: Int?
+    public init(overlap: Int, confidence: Double, error: Double, seam: Int? = nil) {
+        self.overlap = overlap
+        self.confidence = confidence
+        self.error = error
+        self.seam = seam
+    }
     public var isReliable: Bool { overlap > 0 && confidence >= 0.72 }
     public static let none = OverlapMatch(overlap: 0, confidence: 0, error: 1)
 }
@@ -39,7 +47,13 @@ public struct OrderingResult: Sendable {
 public enum StitchMatcher {
     /// Compares the lower part of a screenshot with the upper part of the next.
     /// Flat or repeated content cannot establish a reliable scrolling offset.
-    public static func match(_ upper: PixelGrid, _ lower: PixelGrid) -> OverlapMatch {
+    public static func match(_ upper: PixelGrid, _ lower: PixelGrid, allowOcclusion: Bool = true) -> OverlapMatch {
+        let edge = edgeMatch(upper, lower)
+        if edge.isReliable || !allowOcclusion { return edge }
+        return contentMatch(upper, lower)
+    }
+
+    private static func edgeMatch(_ upper: PixelGrid, _ lower: PixelGrid) -> OverlapMatch {
         guard upper.width == lower.width, upper.width >= 4,
               min(upper.height, lower.height) >= 24 else { return .none }
         let minOverlap = max(16, min(upper.height, lower.height) / 14)
@@ -96,6 +110,123 @@ public enum StitchMatcher {
         return OverlapMatch(overlap: best.key, confidence: confidence, error: best.value)
     }
 
+    /// Vote for a translation using textured rows inside the images. Unlike
+    /// suffix/prefix comparison, this tolerates translucent bars and rounded
+    /// sheets covering both ends of the otherwise shared scrolling content.
+    private static func contentMatch(_ upper: PixelGrid, _ lower: PixelGrid) -> OverlapMatch {
+        guard upper.width == lower.width, upper.width >= 16,
+              min(upper.height, lower.height) >= 80 else { return .none }
+        let a = rowProfiles(upper), b = rowProfiles(lower)
+        let minimum = max(24, min(upper.height, lower.height) / 50)
+        let texturedRows = (0..<lower.height).filter { row in
+            (0..<8).reduce(0.0) { $0 + b[row * 16 + $1 * 2 + 1] } > 4
+        }
+        guard !texturedRows.isEmpty else { return .none }
+        let anchors = (0..<min(160, texturedRows.count)).map {
+            texturedRows[$0 * texturedRows.count / min(160, texturedRows.count)]
+        }
+        var candidates: [(shift: Int, votes: Double)] = []
+        for shift in 8...(upper.height - minimum) {
+            let height = min(upper.height - shift, lower.height)
+            var votes = 0.0
+            for row in anchors {
+                if row >= height { break }
+                var error = 0.0, texture = 0.0
+                for bin in 0..<8 {
+                    let ai = (row + shift) * 16 + bin * 2, bi = row * 16 + bin * 2
+                    error += abs(a[ai] - b[bi]) + abs(a[ai + 1] - b[bi + 1])
+                    if error >= 10 { break }
+                    texture += max(a[ai + 1], b[bi + 1])
+                }
+                if texture > 4, error < 10 {
+                    votes += min(4, texture / 8) * max(0, 1 - error / 10)
+                }
+            }
+            candidates.append((shift, votes))
+        }
+        var seeds: [Int] = []
+        for candidate in candidates.sorted(by: { $0.votes > $1.votes }) {
+            if seeds.allSatisfy({ abs($0 - candidate.shift) > 5 }) { seeds.append(candidate.shift) }
+            if seeds.count == 12 { break }
+        }
+        struct Band {
+            var shift: Int
+            var start: Int
+            var end: Int
+            var support: Int
+            var error: Double
+            var score: Double { Double(support) * max(0, 1 - error) }
+        }
+        var bands: [Band] = []
+        // Retain leading list numbers and timestamps: they often distinguish
+        // repeated paragraphs. Only the narrow scroll-indicator edge is ignored.
+        let margin = max(1, upper.width / 40)
+        for shift in Set(seeds.flatMap { Array(max(8, $0 - 1)...min(upper.height - minimum, $0 + 1)) }) {
+            let height = min(upper.height - shift, lower.height)
+            var start = 0, support = 0, errorSum = 0.0, detailSum = 0.0
+            func finish(_ end: Int) {
+                guard support >= minimum, end - start >= minimum else { return }
+                // Occlusions belong to screen edges. A repeated sentence in
+                // the middle is not evidence that the rest of the overlap
+                // matches. Require the band to cover the unobscured interval.
+                guard start <= lower.height / 3,
+                      end >= height - upper.height / 6 else { return }
+                bands.append(Band(shift: shift, start: start, end: end, support: support,
+                                  error: errorSum / max(1, detailSum)))
+            }
+            for row in 0..<height {
+                var error = 0.0, detail = 0.0, largestError = 0
+                let ai = (row + shift) * upper.width, bi = row * lower.width
+                for x in margin..<(upper.width - margin) {
+                    let av = Int(upper.pixels[ai + x]), bv = Int(lower.pixels[bi + x])
+                    error += Double(abs(av - bv))
+                    largestError = max(largestError, abs(av - bv))
+                    if largestError >= 16 { break }
+                    detail += Double(max(abs(av - Int(upper.pixels[ai + x - 1])),
+                                         abs(bv - Int(lower.pixels[bi + x - 1]))))
+                }
+                let count = Double(upper.width - 2 * margin)
+                // Flat matching rows may connect a band, but cannot prove it.
+                if largestError < 16, error / count < max(1.5, detail / count * 0.22) {
+                    if detail / count > 0.6 { support += 1 }
+                    errorSum += error
+                    detailSum += detail
+                } else {
+                    finish(row)
+                    start = row + 1; support = 0; errorSum = 0; detailSum = 0
+                }
+            }
+            finish(height)
+        }
+        let sorted = bands.sorted { $0.score > $1.score }
+        guard let best = sorted.first, best.error < 0.22 else { return .none }
+        let alternative = sorted.first { abs($0.shift - best.shift) > 5 }?.score ?? 0
+        let separation = max(0, 1 - alternative / best.score)
+        let confidence = (1 - best.error) * (0.65 + 0.35 * separation)
+        guard confidence >= 0.72 else { return .none }
+
+        // Match the wide image too when choosing the join. Its outer columns
+        // reveal rounded corners that were deliberately ignored for alignment.
+        let padding = min(8, (best.end - best.start) / 8)
+        var seam = best.start + padding, seamError = Double.infinity
+        let middle = Double(best.start + best.end) / 2
+        for row in (best.start + padding)..<max(best.start + padding + 1, best.end - padding) {
+            var error = 0.0
+            for y in max(best.start, row - padding)...min(best.end - 1, row + padding) {
+                for x in 0..<upper.width {
+                    error += Double(abs(Int(upper.pixels[(y + best.shift) * upper.width + x])
+                                        - Int(lower.pixels[y * lower.width + x])))
+                }
+            }
+            error /= Double((min(best.end - 1, row + padding) - max(best.start, row - padding) + 1) * upper.width)
+            // Prefer the center of an equally clean band.
+            error += abs(Double(row) - middle) / Double(best.end - best.start) * 0.01
+            if error < seamError { seam = row; seamError = error }
+        }
+        return OverlapMatch(overlap: upper.height - best.shift, confidence: confidence,
+                            error: best.error, seam: seam)
+    }
+
     private static func rowProfiles(_ grid: PixelGrid) -> [Double] {
         var result = [Double](repeating: 0, count: grid.height * 16)
         let margin = max(1, grid.width / 10)
@@ -116,14 +247,18 @@ public enum StitchMatcher {
         return result
     }
 
-    private static func difference(_ a: PixelGrid, _ b: PixelGrid, overlap: Int, everyRow: Bool = false) -> Double {
+    private static func difference(_ a: PixelGrid, _ b: PixelGrid, overlap: Int, everyRow: Bool = false,
+                                   sampleRows: Range<Int>? = nil) -> Double {
         var sum = 0.0
         var detail = 0.0
         var count = 0
         let rowStep = everyRow ? 1 : max(1, overlap / 90)
         // Ignore outer margins, where scroll indicators and floating UI often live.
-        let margin = max(1, a.width / 10)
-        for row in stride(from: 0, to: overlap, by: rowStep) {
+        let margin = max(1, a.width / (sampleRows == nil ? 10 : 40))
+        let start = max(0, sampleRows?.lowerBound ?? 0)
+        let end = min(overlap, sampleRows?.upperBound ?? overlap)
+        guard start < end else { return 1 }
+        for row in stride(from: start, to: end, by: rowStep) {
             let aStart = (a.height - overlap + row) * a.width
             let bStart = row * b.width
             for column in stride(from: margin, to: a.width - margin, by: max(1, a.width / 64)) {
@@ -145,14 +280,14 @@ public enum StitchMatcher {
     /// Resolve the coarse estimate at output-row precision so a downsampled
     /// match does not duplicate or omit a few rows of text at each seam.
     public static func refine(_ upper: PixelGrid, _ lower: PixelGrid,
-                              overlap: Int, radius: Int) -> Int {
+                              overlap: Int, radius: Int, sampleRows: Range<Int>? = nil) -> Int {
         guard upper.width == lower.width, upper.width >= 4 else { return overlap }
         let start = max(8, overlap - radius)
         let end = min(min(upper.height, lower.height) - 1, overlap + radius)
         guard start <= end else { return overlap }
         var best = overlap, error = Double.infinity
         for candidate in start...end {
-            let value = difference(upper, lower, overlap: candidate, everyRow: true)
+            let value = difference(upper, lower, overlap: candidate, everyRow: true, sampleRows: sampleRows)
             if value < error { best = candidate; error = value }
         }
         return best
@@ -198,12 +333,12 @@ public enum StitchMatcher {
 
     /// A bounded beam search finds a directed path. Only a fully reliable chain
     /// may reorder user selections; disconnected or ambiguous sets retain input order.
-    public static func order(_ grids: [PixelGrid], automatic: Bool) -> OrderingResult {
+    public static func order(_ grids: [PixelGrid], automatic: Bool, allowOcclusion: Bool = true) -> OrderingResult {
         let n = grids.count
         guard n > 1 else { return OrderingResult(indices: Array(0..<n), matches: [], changed: false, reliable: true) }
         var matrix = Array(repeating: Array(repeating: OverlapMatch.none, count: n), count: n)
         for i in 0..<(n - 1) {
-            matrix[i][i + 1] = match(grids[i], grids[i + 1])
+            matrix[i][i + 1] = match(grids[i], grids[i + 1], allowOcclusion: allowOcclusion)
         }
         let original = Array(0..<n)
         let originalMatches = (0..<(n - 1)).map { matrix[$0][$0 + 1] }
@@ -218,7 +353,7 @@ public enum StitchMatcher {
         }
         for i in 0..<n {
             for j in 0..<n where i != j && j != i + 1 {
-                matrix[i][j] = match(grids[i], grids[j])
+                    matrix[i][j] = match(grids[i], grids[j], allowOcclusion: allowOcclusion)
             }
         }
         struct Path { var indices: [Int]; var score: Double }

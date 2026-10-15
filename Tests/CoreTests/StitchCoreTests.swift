@@ -135,4 +135,50 @@ final class StitchCoreTests: XCTestCase {
         let repeated = PixelGrid(width: 128, height: 800, pixels: pixels)
         XCTAssertFalse(StitchMatcher.match(repeated, repeated).isReliable)
     }
+
+    func testChangingOverlaysAndSmallVisibleOverlapUseAnInternalSeam() throws {
+        func obscured(_ start: Int) -> PixelGrid {
+            let base = page(start: start, height: 1000)
+            var pixels = base.pixels
+            for y in 0..<1000 {
+                for x in 0..<base.width {
+                    if y < 200 || y >= 940 {
+                        pixels[y * base.width + x] = UInt8(30 + start % 37 + x)
+                    } else if y > 900 && (x < 3 || x >= base.width - 3) {
+                        pixels[y * base.width + x] = 0
+                    }
+                }
+            }
+            return PixelGrid(width: base.width, height: base.height, pixels: pixels)
+        }
+        // Only 70 rows of shared body remain between the two occluding bars.
+        let match = StitchMatcher.match(obscured(0), obscured(670))
+        XCTAssertTrue(match.isReliable, "\(match)")
+        XCTAssertEqual(match.overlap, 330)
+        let seam = try XCTUnwrap(match.seam)
+        XCTAssertGreaterThanOrEqual(seam, 200)
+        XCTAssertLessThan(seam + 670, 940)
+        let ranges = CompositionPlan.ranges(heights: [1000, 1000], top: 0, bottom: 0,
+                                            overlaps: [seam], endCuts: [330 - seam])
+        XCTAssertEqual(ranges[0].end - ranges[1].start, 670)
+        XCTAssertEqual(ranges.map(\.height).reduce(0, +), 1670)
+    }
+
+    func testScrollIndicatorRequiresANarrowStripeWithMatchingBackground() throws {
+        func grid(stripeWidth: Int, matchingBackground: Bool) -> PixelGrid {
+            var pixels = [UInt8](repeating: 30, count: 400 * 800)
+            for y in 200..<650 {
+                for x in (394 - stripeWidth)..<394 { pixels[y * 400 + x] = 150 }
+                if !matchingBackground { pixels[y * 400 + 395] = 90 }
+            }
+            return PixelGrid(width: 400, height: 800, pixels: pixels)
+        }
+        let indicator = try XCTUnwrap(ScrollIndicator.find(in: grid(stripeWidth: 3, matchingBackground: true)))
+        XCTAssertLessThanOrEqual(indicator.left, 391)
+        XCTAssertGreaterThanOrEqual(indicator.right, 394)
+        XCTAssertLessThan(indicator.top, 200)
+        XCTAssertGreaterThan(indicator.bottom, 650)
+        XCTAssertNil(ScrollIndicator.find(in: grid(stripeWidth: 12, matchingBackground: true)))
+        XCTAssertNil(ScrollIndicator.find(in: grid(stripeWidth: 3, matchingBackground: false)))
+    }
 }

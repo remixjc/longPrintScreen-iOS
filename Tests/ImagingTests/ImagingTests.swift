@@ -11,7 +11,98 @@ import StitchCore
 #endif
 
 final class ImagingTests: XCTestCase {
-    private func textFixture(jpeg: Bool) throws -> (directory: URL, urls: [URL], expected: CGImage) {
+    /// Private screenshots stay outside the repository. Set this directory to
+    /// run the reported Health-sheet case through the same engine as the app.
+    @MainActor
+    func testLocalHealthScreenshots() async throws {
+        var path = ProcessInfo.processInfo.environment["LONGSHOT_HEALTH_FIXTURES"]
+        #if os(iOS)
+        if path == nil {
+            let candidate = try XCTUnwrap(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first)
+                .appendingPathComponent("HealthRegression")
+            if FileManager.default.fileExists(atPath: candidate.appendingPathComponent("IMG_5758.PNG").path) {
+                path = candidate.path
+            }
+        }
+        #endif
+        guard let path else {
+            throw XCTSkip("Set LONGSHOT_HEALTH_FIXTURES to the local screenshot directory")
+        }
+        let directory = URL(fileURLWithPath: path, isDirectory: true)
+        let urls = (5758...5762).map { directory.appendingPathComponent("IMG_\($0).PNG") }
+        #if canImport(StitchImaging)
+        let engine = StitchEngine()
+        let analysis = try await engine.analyze(urls: urls.reversed(), automatic: true, trimChrome: true)
+        let output = try await engine.render(analysis, overlaps: analysis.overlaps, endCuts: analysis.endCuts,
+                                             top: analysis.top, bottom: analysis.bottom, preview: false)
+        #else
+        // Exercise the actual editor defaults and export, including applying
+        // both halves of an automatic seam to WorkspaceModel.
+        let model = WorkspaceModel()
+        defer { model.closeEditor() }
+        let batchDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: batchDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: batchDirectory) }
+        let files = Array(urls.reversed()).map(\.lastPathComponent)
+        for url in urls {
+            try FileManager.default.copyItem(at: url, to: batchDirectory.appendingPathComponent(url.lastPathComponent))
+        }
+        let batch = ImportBatch(id: UUID(), created: .now, source: "回归测试", files: files, complete: true)
+        await model.importBatch(batch, directory: batchDirectory)
+        let analysis = try XCTUnwrap(model.analysis, model.message ?? "Import did not create an editor")
+        XCTAssertEqual(model.overlaps, analysis.overlaps)
+        XCTAssertEqual(model.endCuts, analysis.endCuts)
+        let exported = await model.export()
+        let output = try XCTUnwrap(exported)
+        #endif
+        print("Health analysis:", analysis.shots.map(\.label), analysis.overlaps, analysis.endCuts,
+              analysis.confidences, analysis.top, analysis.bottom)
+        #if canImport(StitchImaging)
+        XCTAssertEqual(analysis.shots.map(\.url), urls)
+        #endif
+        XCTAssertEqual(analysis.shots.map(\.label), ["5", "4", "3", "2", "1"])
+        XCTAssertTrue(analysis.confidences.allSatisfy { $0 >= 0.72 })
+        for (index, shift) in [2114, 1721, 1741, 541].enumerated() {
+            XCTAssertEqual(analysis.heights[index] - analysis.top - analysis.bottom
+                           - analysis.overlaps[index] - analysis.endCuts[index], shift)
+        }
+        defer { try? FileManager.default.removeItem(at: output) }
+        XCTAssertEqual(try ImageFiles.size(at: output).height, 8985, accuracy: 5)
+        let actual = try ImageFiles.image(at: output, maxDimension: 10000)
+        let reference = try ImageFiles.image(at: directory.appendingPathComponent("IMG_5763.JPG"), maxDimension: 10000)
+        XCTAssertEqual(actual.width, reference.width)
+        XCTAssertEqual(actual.height, reference.height)
+        if actual.height == reference.height {
+            // JPEG compression is allowed; displaced text or repeated bars are
+            // not. Check the full page as well as every seam independently.
+            let a = try ImageFiles.grid(actual, width: 256, height: actual.height)
+            let b = try ImageFiles.grid(reference, width: 256, height: reference.height)
+            XCTAssertLessThan(StitchMatcher.meanDifference(a, b), 0.004)
+            let ranges = CompositionPlan.ranges(heights: analysis.heights, top: analysis.top, bottom: analysis.bottom,
+                                                overlaps: analysis.overlaps, endCuts: analysis.endCuts)
+            var cursor = 0
+            for range in ranges.dropLast() {
+                cursor += range.height
+                let ag = a.cropped(top: cursor - 80, bottom: a.height - cursor - 80)
+                let bg = b.cropped(top: cursor - 80, bottom: b.height - cursor - 80)
+                // Dark antialiased Chinese text differs by about one gray
+                // level after JPEG/color-space conversion.
+                XCTAssertLessThan(StitchMatcher.meanDifference(ag, bg), 0.006)
+            }
+        }
+        var artifacts = ProcessInfo.processInfo.environment["LONGSHOT_HEALTH_ARTIFACTS"]
+        #if os(iOS)
+        artifacts = artifacts ?? directory.appendingPathComponent("Output").path
+        #endif
+        if let artifacts {
+            let target = URL(fileURLWithPath: artifacts).appendingPathComponent("stitched.png")
+            try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? FileManager.default.removeItem(at: target)
+            try FileManager.default.copyItem(at: output, to: target)
+        }
+    }
+
+    private func textFixture(jpeg: Bool, varyingChrome: Bool = false) throws -> (directory: URL, urls: [URL], expected: CGImage) {
         let width = 1170, height = 2532, header = 324, footer = 252, scroll = 1169
         let pageHeight = height - header - footer + scroll * 2
         func canvas(_ h: Int) throws -> CGContext {
@@ -43,7 +134,7 @@ final class ImagingTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         func chrome(_ context: CGContext, h: Int, index: Int) {
-            context.setFillColor(CGColor(gray: 0.96, alpha: 1))
+            context.setFillColor(CGColor(gray: varyingChrome ? 0.75 + Double(index) * 0.04 : 0.96, alpha: 1))
             context.fill(CGRect(x: 0, y: h - header, width: width, height: header))
             context.fill(CGRect(x: 0, y: 0, width: width, height: footer))
             text("9:\(41 + index)", context, x: 72, y: h - 100, size: 36)
@@ -85,6 +176,10 @@ final class ImagingTests: XCTestCase {
         try await verifyTextPipeline(jpeg: true, shuffled: true)
     }
 
+    func testChangingHeaderAndFooterUseSafeInternalJoins() async throws {
+        try await verifyTextPipeline(jpeg: false, shuffled: true, varyingChrome: true)
+    }
+
     func testSeparatedTextScreenshotsDoNotInventAnOverlap() async throws {
         let fixture = try textFixture(jpeg: false)
         defer { try? FileManager.default.removeItem(at: fixture.directory) }
@@ -95,20 +190,25 @@ final class ImagingTests: XCTestCase {
         XCTAssertLessThan(analysis.confidences[0], 0.72)
     }
 
-    private func verifyTextPipeline(jpeg: Bool, shuffled: Bool) async throws {
-        let fixture = try textFixture(jpeg: jpeg)
+    private func verifyTextPipeline(jpeg: Bool, shuffled: Bool, varyingChrome: Bool = false) async throws {
+        let fixture = try textFixture(jpeg: jpeg, varyingChrome: varyingChrome)
         defer { try? FileManager.default.removeItem(at: fixture.directory) }
         let engine = StitchEngine()
         let urls = shuffled ? [fixture.urls[2], fixture.urls[0], fixture.urls[1]] : fixture.urls
         let analysis = try await engine.analyze(urls: urls, automatic: true, trimChrome: true)
         XCTAssertEqual(analysis.shots.map(\.url), fixture.urls)
         XCTAssertTrue(analysis.confidences.allSatisfy { $0 >= 0.72 }, "\(analysis.confidences)")
-        XCTAssertGreaterThanOrEqual(analysis.top, 324)
-        XCTAssertGreaterThanOrEqual(analysis.bottom, 252)
-        for overlap in analysis.overlaps {
-            XCTAssertEqual(overlap, 2532 - analysis.top - analysis.bottom - 1169, accuracy: 1)
+        if varyingChrome {
+            XCTAssertTrue(analysis.endCuts.allSatisfy { $0 > 0 })
+        } else {
+            XCTAssertGreaterThanOrEqual(analysis.top, 324)
+            XCTAssertGreaterThanOrEqual(analysis.bottom, 252)
         }
-        let result = try await engine.render(analysis, overlaps: analysis.overlaps, endCuts: [0, 0],
+        for index in analysis.overlaps.indices {
+            XCTAssertEqual(analysis.overlaps[index] + analysis.endCuts[index],
+                           2532 - analysis.top - analysis.bottom - 1169, accuracy: 1)
+        }
+        let result = try await engine.render(analysis, overlaps: analysis.overlaps, endCuts: analysis.endCuts,
                                              top: analysis.top, bottom: analysis.bottom, preview: false)
         defer { try? FileManager.default.removeItem(at: result) }
         if !jpeg, let path = ProcessInfo.processInfo.environment["LONGSHOT_STITCH_ARTIFACTS"] {
@@ -136,8 +236,8 @@ final class ImagingTests: XCTestCase {
         for (source, sourceY, outputY, h) in [(first, 0, 0, 324), (last, 2280, image.height - 252, 252)] {
             let a = try XCTUnwrap(source.cropping(to: CGRect(x: 0, y: sourceY, width: 1170, height: h)))
             let b = try XCTUnwrap(image.cropping(to: CGRect(x: 0, y: outputY, width: 1170, height: h)))
-            XCTAssertEqual(try ImageFiles.grid(a, width: 128, height: h).pixels,
-                           try ImageFiles.grid(b, width: 128, height: h).pixels)
+            XCTAssertTrue(try ImageFiles.grid(a, width: 128, height: h).pixels ==
+                          ImageFiles.grid(b, width: 128, height: h).pixels, "Outer header/footer pixels changed")
         }
     }
 
