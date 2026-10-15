@@ -23,11 +23,11 @@ jobs:
           import json, os, sys
           devices = [d for runtime, items in json.load(sys.stdin)["devices"].items() if "iOS" in runtime for d in items]
           if os.environ["SCREENSHOT_DEVICE"] == "iPad":
-              matches = [d for d in devices if d["name"].startswith(("iPad Pro (13-inch)", "iPad Pro (12.9-inch)"))]
+              matches = [d for d in devices if d["name"].startswith("iPad Pro") and any(size in d["name"] for size in ("13-inch", "12.9-inch"))]
           else:
               matches = [d for d in devices if d["name"].startswith("iPhone") and "Pro Max" in d["name"]]
           if not matches:
-              raise SystemExit("Required App Store screenshot device unavailable")
+              raise SystemExit("Required App Store screenshot device unavailable: " + ", ".join(d["name"] for d in devices))
           print(matches[0]["udid"])')
           xcodebuild -project LongShot.xcodeproj -scheme LongShot \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
