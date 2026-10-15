@@ -173,6 +173,8 @@ struct EditorView: View {
                     }
                 }
                 SectionLabel(title: "图片顺序", detail: "箭头调整")
+                Text("录屏里的切换画面、通知或多余截图，可在这里移除。至少保留两张。")
+                    .font(.caption).foregroundStyle(Theme.muted)
                 ForEach(Array(analysis.shots.enumerated()), id: \.element.id) { index, shot in
                     Card {
                         HStack(spacing: 14) {
@@ -189,6 +191,9 @@ struct EditorView: View {
                             Button { Task { await workspace.move(from: index, to: index + 1) } } label: {
                                 Image(systemName: "arrow.down").frame(width: 32, height: 40)
                             }.disabled(index == analysis.shots.count - 1).accessibilityLabel("第\(index + 1)张下移")
+                            Button { Task { await workspace.removeShot(at: index); selectedSeam = 0 } } label: {
+                                Image(systemName: "trash").frame(width: 28, height: 40).foregroundStyle(Theme.muted)
+                            }.disabled(analysis.shots.count <= 2).accessibilityLabel("移除第\(index + 1)张")
                         }
                     }
                 }

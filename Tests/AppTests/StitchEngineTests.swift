@@ -91,6 +91,19 @@ final class StitchEngineTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: exported.path))
     }
 
+    @MainActor
+    func testRemovingAnUnwantedCaptureKeepsTwoImageMinimum() async throws {
+        let model = WorkspaceModel()
+        await model.loadDemo()
+        XCTAssertEqual(model.analysis?.shots.count, 3)
+        await model.removeShot(at: 0)
+        XCTAssertEqual(model.analysis?.shots.count, 2)
+        XCTAssertEqual(model.overlaps.count, 1)
+        await model.removeShot(at: 0)
+        XCTAssertEqual(model.analysis?.shots.count, 2)
+        model.closeEditor()
+    }
+
     func testVideoImportExtractsChangingFrames() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

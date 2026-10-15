@@ -106,6 +106,18 @@ final class WorkspaceModel: ObservableObject {
         catch { message = error.localizedDescription }
     }
 
+    func removeShot(at index: Int) async {
+        guard let analysis, !busy, analysis.shots.count > 2,
+              analysis.shots.indices.contains(index) else { return }
+        var urls = analysis.shots.map(\.url)
+        urls.remove(at: index)
+        busy = true
+        progress = "移除图片并更新拼接点"
+        defer { busy = false }
+        do { try await analyze(urls, autoOrder: false) }
+        catch { message = error.localizedDescription }
+    }
+
     private func analyze(_ urls: [URL], autoOrder: Bool? = nil) async throws {
         progress = "识别重叠与顺序"
         let result = try await engine.analyze(urls: urls, automatic: autoOrder ?? automaticOrder, trimChrome: trimChrome)
