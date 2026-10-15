@@ -54,4 +54,6 @@ App ID 为 `com.remixjc.longPrintScreen`，两个扩展后缀为 `.share` 和 `.
 
 完整配置和必须在真机 / App Store Connect 完成的验收见 [上架说明](docs/RELEASE.md)。ReplayKit 跨 App 录屏不能用模拟器测试代替；模拟器购买使用 StoreKit 本地环境，不能代替沙盒或 TestFlight 验证。
 
+已完成的构建、23 项自动化测试、签名与剩余真实环境限制见 [验证记录](docs/TESTING.md)。运行截图见 [首页](docs/screenshots/home.png)、[拼接预览](docs/screenshots/editor.png)、[拼接点微调](docs/screenshots/seam.png) 和 [录屏说明](docs/screenshots/recording.png)。
+
 图片不上传、不修改原图；待导入内容在设备本地保留最多七天，并可主动删除。见 [隐私政策](docs/PRIVACY.md) 与 [使用条款](docs/TERMS.md)。
