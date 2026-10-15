@@ -104,6 +104,47 @@ final class StitchEngineTests: XCTestCase {
         model.closeEditor()
     }
 
+    @MainActor
+    func testImportAppliesBothAutomaticSeamCutsBeforePreviewAndExport() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let width = 64, height = 1000, scroll = 550
+        for frame in 0..<3 {
+            var pixels = [UInt8](repeating: 255, count: width * height * 4)
+            for y in 0..<height {
+                for x in 0..<width {
+                    var seed = UInt64((y + frame * scroll) * 100 + x + 1)
+                    seed = (seed ^ (seed >> 30)) &* 0xbf58476d1ce4e5b9
+                    seed = (seed ^ (seed >> 27)) &* 0x94d049bb133111eb
+                    let value = y < 220 || y >= 940 ? UInt8(30 + frame * 40)
+                        : UInt8(truncatingIfNeeded: seed ^ (seed >> 31))
+                    let offset = (y * width + x) * 4
+                    pixels[offset] = value; pixels[offset + 1] = value; pixels[offset + 2] = value
+                }
+            }
+            let provider = try XCTUnwrap(CGDataProvider(data: Data(pixels) as CFData))
+            let image = try XCTUnwrap(CGImage(width: width, height: height, bitsPerComponent: 8,
+                                              bitsPerPixel: 32, bytesPerRow: width * 4,
+                                              space: CGColorSpaceCreateDeviceRGB(),
+                                              bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                                              provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent))
+            try XCTUnwrap(UIImage(cgImage: image).pngData()).write(to: directory.appendingPathComponent("\(frame).png"))
+        }
+        let model = WorkspaceModel()
+        defer { model.closeEditor() }
+        let batch = ImportBatch(id: UUID(), created: .now, source: "测试", files: ["2.png", "0.png", "1.png"], complete: true)
+        await model.importBatch(batch, directory: directory)
+        let analysis = try XCTUnwrap(model.analysis, model.message ?? "Import failed")
+        XCTAssertEqual(analysis.shots.map(\.label), ["2", "3", "1"])
+        XCTAssertTrue(analysis.endCuts.allSatisfy { $0 > 0 })
+        XCTAssertEqual(model.endCuts, analysis.endCuts)
+        XCTAssertNotNil(model.preview)
+        let exported = await model.export()
+        let url = try XCTUnwrap(exported)
+        XCTAssertEqual(try ImageFiles.size(at: url).height, height + scroll * 2)
+    }
+
     func testVideoImportExtractsChangingFrames() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
